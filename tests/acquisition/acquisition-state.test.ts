@@ -42,6 +42,10 @@ describe("acquisition state machine", () => {
       state: "SENSOR_READY",
       lastStopReason: "ui",
     });
+    expect(run([{ type: "stop", reason: "navigation" }], measuring)).toMatchObject({
+      state: "SENSOR_READY",
+      lastStopReason: "navigation",
+    });
     expect(run([{ type: "trigger", kind: "stop" }], measuring)).toMatchObject({
       state: "SENSOR_READY",
       lastStopReason: "trigger",

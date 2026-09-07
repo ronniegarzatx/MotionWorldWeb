@@ -25,7 +25,11 @@ describe("AcquisitionController", () => {
     await controller.start();
     vi.advanceTimersByTime(200);
     await controller.stop();
-    expect(states).toEqual([
+    // collapse consecutive duplicates (a bare "connecting" flip emits with the
+    // machine still NO_DEVICE before connect resolves)
+    const collapsed = states.filter((s, i) => s !== states[i - 1]);
+    expect(collapsed).toEqual([
+      "NO_DEVICE",
       "SYSTEM_READY",
       "SENSOR_READY",
       "MEASURING",
@@ -100,5 +104,55 @@ describe("AcquisitionController", () => {
     // simulate a button press: adapter goes measuring + emits a trigger
     await adapter.start();
     expect(states.at(-1)).toBe("MEASURING");
+  });
+
+  it("exposes a `connecting` flag while the adapter opens/reopens a device", async () => {
+    const { adapter, controller } = setup();
+    const seen: boolean[] = [];
+    controller.subscribeUiState((s) => seen.push(s.connecting));
+    adapter.cancelNextConnectSelection(); // -> connecting then error, no device
+    await controller.connect();
+    expect(seen).toContain(true);
+    expect(controller.uiState.connecting).toBe(false);
+  });
+
+  it("stopForNavigation freezes the partial run with reason 'navigation'", async () => {
+    const { controller, runs } = setup();
+    await controller.connect();
+    await controller.arm();
+    await controller.start();
+    vi.advanceTimersByTime(120); // 3 samples
+    await controller.stopForNavigation();
+    expect(controller.uiState.state).toBe("SENSOR_READY");
+    expect(controller.uiState.lastStopReason).toBe("navigation");
+    expect(runs).toHaveLength(1);
+    expect(runs[0]!.sampleCount).toBe(3);
+  });
+
+  it("stopForNavigation is a no-op when not measuring", async () => {
+    const { controller, runs } = setup();
+    await controller.connect();
+    await controller.arm();
+    await controller.stopForNavigation();
+    expect(controller.uiState.state).toBe("SENSOR_READY");
+    expect(runs).toHaveLength(0);
+  });
+
+  it("currentRunSamples / lastCompletedRun snapshots for view restore", async () => {
+    const { controller } = setup();
+    await controller.connect();
+    await controller.arm();
+    expect(controller.currentRunSamples()).toEqual([]);
+    expect(controller.lastCompletedRun()).toBeNull();
+
+    await controller.start();
+    vi.advanceTimersByTime(200); // 5 samples
+    const live = controller.currentRunSamples();
+    expect(live).toHaveLength(5);
+    expect(Object.isFrozen(live)).toBe(true);
+
+    await controller.stop();
+    expect(controller.currentRunSamples()).toEqual([]);
+    expect(controller.lastCompletedRun()?.sampleCount).toBe(5);
   });
 });

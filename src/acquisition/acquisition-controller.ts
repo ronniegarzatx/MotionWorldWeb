@@ -21,6 +21,8 @@ import type {
 export interface AcquisitionUiState {
   readonly state: AcquisitionState;
   readonly connected: boolean;
+  /** adapter is opening / reopening a device (connect or silent reconnect). */
+  readonly connecting: boolean;
   readonly deviceLabel: string | null;
   readonly canConnect: boolean;
   readonly canReconnect: boolean;
@@ -49,6 +51,8 @@ export class AcquisitionController {
   private readonly runsOut = createEmitter<MotionRun>();
 
   private buffer: MotionSample[] = [];
+  private lastRun: MotionRun | null = null;
+  private adapterConnecting = false;
   private readonly unsubs: Unsubscribe[] = [];
   private readonly samplerHz: number;
   private readonly log: (m: string) => void;
@@ -79,6 +83,16 @@ export class AcquisitionController {
   }
   subscribeRunComplete(listener: (r: MotionRun) => void): Unsubscribe {
     return this.runsOut.subscribe(listener);
+  }
+
+  /** Frozen snapshot of the samples collected so far in the active run (empty when not measuring). */
+  currentRunSamples(): readonly MotionSample[] {
+    return Object.freeze(this.buffer.slice());
+  }
+
+  /** The most recent completed run, or null. */
+  lastCompletedRun(): MotionRun | null {
+    return this.lastRun;
   }
 
   // ── intents (guarded) ─────────────────────────────────────────────────────
@@ -113,6 +127,17 @@ export class AcquisitionController {
     await this.adapter.stop();
   }
 
+  /**
+   * Stop an in-progress run because the teacher navigated away from a tool. The
+   * connection stays open and the sensor stays armed; the partial run is frozen
+   * and kept. No-op if not measuring.
+   */
+  async stopForNavigation(): Promise<void> {
+    if (this.snap.state !== "MEASURING") return;
+    this.apply({ type: "stop", reason: "navigation" });
+    await this.adapter.stop();
+  }
+
   dispose(): void {
     for (const u of this.unsubs.splice(0)) u();
   }
@@ -123,34 +148,42 @@ export class AcquisitionController {
 
   // ── adapter reactions ─────────────────────────────────────────────────────
   private onAdapterStatus(s: SensorStatus): void {
+    const connecting = s === "connecting" || s === "reconnecting";
+    const flagChanged = connecting !== this.adapterConnecting;
+    this.adapterConnecting = connecting;
+
+    const emitted = this.applyForStatus(s);
+
+    // The "connecting" flag drives the bar's "Connecting…" copy on its own — make
+    // sure a flag flip is visible even when no machine transition emitted.
+    if (flagChanged && !emitted) {
+      this.uiStates.emit(this.deriveUiState());
+    }
+  }
+
+  private applyForStatus(s: SensorStatus): boolean {
     switch (s) {
       case "system_ready":
-        if (this.snap.state === "SENSOR_READY") this.apply({ type: "disarm" });
-        else if (this.snap.state === "MEASURING") this.apply({ type: "stop" });
-        else this.apply({ type: "connected" });
-        break;
+        if (this.snap.state === "SENSOR_READY") return this.apply({ type: "disarm" });
+        if (this.snap.state === "MEASURING") return this.apply({ type: "stop" });
+        return this.apply({ type: "connected" });
       case "sensor_ready":
-        this.apply({ type: "arm" });
-        break;
+        return this.apply({ type: "arm" });
       case "measuring":
-        this.apply({ type: "trigger", kind: "start" });
-        break;
+        return this.apply({ type: "trigger", kind: "start" });
       case "device_lost":
-        this.apply({ type: "lost" });
-        break;
+        return this.apply({ type: "lost" });
       case "error":
-        this.apply({
+        return this.apply({
           type: "error",
           code: this.adapter.lastError?.code ?? "unknown",
           message: this.adapter.lastError?.message ?? "unknown error",
         });
-        break;
       case "no_device":
-        this.apply({ type: "disconnected" });
-        break;
+        return this.apply({ type: "disconnected" });
       case "connecting":
       case "reconnecting":
-        break;
+        return false;
     }
   }
 
@@ -164,10 +197,11 @@ export class AcquisitionController {
     this.samplesOut.emit(sample);
   }
 
-  private apply(event: AcquisitionEvent): void {
+  /** Returns true if a uiState change was emitted. */
+  private apply(event: AcquisitionEvent): boolean {
     const prev = this.snap;
     const next = reduce(prev, event);
-    if (next === prev) return;
+    if (next === prev) return false;
 
     const wasMeasuring = prev.state === "MEASURING";
     const nowMeasuring = next.state === "MEASURING";
@@ -181,6 +215,7 @@ export class AcquisitionController {
     }
 
     this.uiStates.emit(this.deriveUiState());
+    return true;
   }
 
   private finishRun(): void {
@@ -191,6 +226,7 @@ export class AcquisitionController {
       deviceLabel: this.adapter.deviceLabel,
     });
     this.buffer = [];
+    this.lastRun = run;
     this.runsOut.emit(run);
   }
 
@@ -198,6 +234,7 @@ export class AcquisitionController {
     const flags = deriveUiFlags(this.snap.state);
     return {
       state: this.snap.state,
+      connecting: this.adapterConnecting,
       deviceLabel: this.adapter.deviceLabel,
       lastStopReason: this.snap.lastStopReason,
       lastError: this.snap.error,

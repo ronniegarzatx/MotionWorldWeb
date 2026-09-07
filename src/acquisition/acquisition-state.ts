@@ -19,7 +19,13 @@ export type AcquisitionState =
   | "DEVICE_LOST"
   | "ERROR";
 
-export type StopReason = "ui" | "trigger" | "device_lost" | "error" | null;
+export type StopReason =
+  | "ui"
+  | "trigger"
+  | "navigation"
+  | "device_lost"
+  | "error"
+  | null;
 
 export interface AcquisitionSnapshot {
   readonly state: AcquisitionState;
@@ -33,7 +39,7 @@ export type AcquisitionEvent =
   | { readonly type: "arm" }
   | { readonly type: "disarm" }
   | { readonly type: "start" } // UI Start intent
-  | { readonly type: "stop" } // UI Stop intent
+  | { readonly type: "stop"; readonly reason?: StopReason } // UI Stop / navigation
   | { readonly type: "trigger"; readonly kind: "start" | "stop" }
   | { readonly type: "lost" }
   | { readonly type: "error"; readonly code: string; readonly message: string }
@@ -98,7 +104,7 @@ export function reduce(
 
     case "MEASURING":
       if (event.type === "stop") {
-        return { ...snap, state: "SENSOR_READY", lastStopReason: "ui" };
+        return { ...snap, state: "SENSOR_READY", lastStopReason: event.reason ?? "ui" };
       }
       if (event.type === "trigger" && event.kind === "stop") {
         return { ...snap, state: "SENSOR_READY", lastStopReason: "trigger" };
