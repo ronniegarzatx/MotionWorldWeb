@@ -16,6 +16,7 @@ import { mountHomeView } from "../ui/home/home-view.js";
 import { mountLiveLabView } from "../ui/live/live-lab-view.js";
 import { mountDataDisplayView } from "../ui/data/data-display-view.js";
 import { mountWalkTheLineView } from "../ui/walk/walk-the-line-view.js";
+import { TargetOffsets } from "../ui/walk/target-offsets.js";
 import { installStartStopKey } from "../ui/keyboard.js";
 
 export interface StartAppOptions {
@@ -72,7 +73,8 @@ export function startApp(opts: StartAppOptions): {
     ),
   );
 
-  const store = new AppStore({ route: "home" });
+  const offsets = new TargetOffsets();
+  const appStore = new AppStore({ route: "home" });
   const router = createRouter(flags);
 
   const mountRoute = (route: Route, main: HTMLElement): (() => void) => {
@@ -84,7 +86,7 @@ export function startApp(opts: StartAppOptions): {
       case "data":
         return mountDataDisplayView(main, { controller });
       case "walk":
-        return mountWalkTheLineView(main, { controller });
+        return mountWalkTheLineView(main, { controller, offsets });
       case "diagnostics":
         return mountSensorDiagnosticsView(main, {
           controller,
@@ -112,7 +114,7 @@ export function startApp(opts: StartAppOptions): {
       void controller.stopForNavigation();
     }
     currentRoute = route;
-    store.setRoute(route);
+    appStore.setRoute(route);
     shell.renderRoute(route);
   });
 

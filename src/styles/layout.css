@@ -126,6 +126,18 @@
   gap: var(--s-2);
   align-items: center;
 }
+.walk-offset {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.walk-offset__label {
+  min-width: 9.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+  font-size: var(--type-body);
+}
 .walk-legend {
   display: flex;
   gap: var(--s-4);
