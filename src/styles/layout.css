@@ -69,6 +69,75 @@
   flex-wrap: wrap;
 }
 
+/* Walk the Line: graph dominates, target-nav below. */
+.walk-lab {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--s-3);
+  flex: 1;
+  min-height: 0;
+}
+.walk-lab .chart-host {
+  min-height: 300px;
+  height: 56vh;
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.walk-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+.walk-head__title {
+  font-size: var(--type-h1);
+  font-weight: 700;
+}
+.walk-head__target {
+  font-size: var(--type-h2);
+  color: var(--accent);
+  font-weight: 600;
+}
+.walk-head__hint {
+  flex-basis: 100%;
+  color: var(--ink-dim);
+  font-size: var(--type-body);
+}
+.walk-head__prompt {
+  flex-basis: 100%;
+  color: var(--ink-faint);
+  font-size: var(--type-label);
+}
+.walk-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+.walk-legend {
+  display: flex;
+  gap: var(--s-4);
+  font-size: var(--type-label);
+  color: var(--ink-dim);
+  margin-left: auto;
+}
+.walk-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.walk-legend .k-target::before {
+  border-top: 3px dashed var(--ink-dim);
+}
+.walk-legend .k-you::before {
+  border-top: 3px solid var(--trace);
+}
+
 /* Data Display: one huge number. */
 .data-display {
   flex: 1;
