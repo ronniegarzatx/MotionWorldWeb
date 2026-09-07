@@ -9,7 +9,6 @@ import {
 } from "./acquisition-state.js";
 import { createEmitter } from "../sensor/emitter.js";
 import { makeMotionRun, type MotionRun } from "../model/motion-run.js";
-import { DEFAULT_PERIOD_SECONDS } from "../sensor/go-motion-protocol.js";
 import type {
   MotionSample,
   SensorAdapter,
@@ -61,7 +60,8 @@ export class AcquisitionController {
     private readonly adapter: SensorAdapter,
     opts: AcquisitionControllerOptions = {},
   ) {
-    this.samplerHz = opts.samplerHz ?? Math.round(1 / DEFAULT_PERIOD_SECONDS);
+    // 25 Hz = the native Motion World / Go!Motion baseline (0.040 s period).
+    this.samplerHz = opts.samplerHz ?? 25;
     this.log = opts.log ?? (() => {});
 
     this.unsubs.push(

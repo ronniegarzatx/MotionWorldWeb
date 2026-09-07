@@ -1,5 +1,7 @@
 import type { RawReport } from "../sensor/types.js";
-import { toHex } from "../sensor/go-motion-protocol.js";
+
+const toHex = (bytes: Uint8Array): string =>
+  Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(" ");
 
 export interface RawReportInput {
   readonly reportId: number;

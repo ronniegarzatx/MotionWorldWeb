@@ -41,20 +41,22 @@ protocol diagnostics move behind `?debug=sensor`.
 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)
 (GitHub Actions → Pages, static, no backend).
 
-### Running the spike
+### Running
 
 ```
 npm ci
 npm run dev            # http://localhost:5173  (a secure context for WebHID)
-npm test               # 84 unit tests, no hardware needed
+npm test               # unit tests, no hardware needed
 npm run build          # static output in dist/  (deploy anywhere over HTTPS)
 ```
 
 URL flags:
 
 - `?fake` — run against `FakeSensorAdapter` (no hardware; use this on the Mac).
-- `?broad` — **development only**: widen the HID chooser to any Vernier device
-  to identify an unknown sensor. Not the default; logged loudly.
+- `?debug=sensor` — reveal the developer **Sensor Diagnostics** view
+  (`#/diagnostics`): device descriptor, event log, raw HID ring, timing. Compose
+  with `?fake` (`?fake&debug=sensor`). Not shown to teachers.
+- `?broad` — **development only**: widen the HID chooser to any Vernier device.
 
 > `npm` in this environment gates package install scripts; `package.json`
 > carries an `allowScripts` entry for the exact `esbuild` build. If you bump
