@@ -1,6 +1,12 @@
 import type { Flags } from "./flags.js";
 
-export type Route = "home" | "live" | "data" | "walk" | "diagnostics";
+export type Route = "home" | "live" | "data" | "walk" | "runs" | "run" | "diagnostics";
+
+/** A resolved location: the route, plus an optional path param (e.g. a run id). */
+export interface Location {
+  readonly route: Route;
+  readonly param?: string;
+}
 
 const HASH_TO_ROUTE: Record<string, Route> = {
   "": "home",
@@ -8,6 +14,7 @@ const HASH_TO_ROUTE: Record<string, Route> = {
   "#/live": "live",
   "#/data": "data",
   "#/walk": "walk",
+  "#/runs": "runs",
   "#/diagnostics": "diagnostics",
 };
 
@@ -16,40 +23,50 @@ const ROUTE_TO_HASH: Record<Route, string> = {
   live: "#/live",
   data: "#/data",
   walk: "#/walk",
+  runs: "#/runs",
+  run: "#/run",
   diagnostics: "#/diagnostics",
 };
 
-export function routeFromHash(hash: string, flags: Flags): Route {
+export function locationFromHash(hash: string, flags: Flags): Location {
+  if (hash.startsWith("#/run/")) {
+    const id = hash.slice("#/run/".length);
+    return id ? { route: "run", param: decodeURIComponent(id) } : { route: "runs" };
+  }
   const route = HASH_TO_ROUTE[hash] ?? "home";
-  // The diagnostics view is developer-only.
-  if (route === "diagnostics" && !flags.debugSensor && !flags.fake) return "home";
-  return route;
+  // the diagnostics view is developer-only
+  if (route === "diagnostics" && !flags.debugSensor && !flags.fake) return { route: "home" };
+  return { route };
 }
 
 export interface Router {
-  readonly route: Route;
-  start(onChange: (route: Route) => void): void;
-  navigate(route: Route): void;
+  readonly location: Location;
+  start(onChange: (location: Location) => void): void;
+  navigate(route: Route, param?: string): void;
   stop(): void;
+}
+
+function sameLocation(a: Location, b: Location): boolean {
+  return a.route === b.route && a.param === b.param;
 }
 
 export function createRouter(
   flags: Flags,
   win: Pick<Window, "location" | "addEventListener" | "removeEventListener"> = window,
 ): Router {
-  let current: Route = routeFromHash(win.location.hash, flags);
-  let listener: ((route: Route) => void) | null = null;
+  let current: Location = locationFromHash(win.location.hash, flags);
+  let listener: ((location: Location) => void) | null = null;
 
   const onHashChange = (): void => {
-    const next = routeFromHash(win.location.hash, flags);
-    if (next !== current) {
+    const next = locationFromHash(win.location.hash, flags);
+    if (!sameLocation(next, current)) {
       current = next;
       listener?.(current);
     }
   };
 
   return {
-    get route() {
+    get location() {
       return current;
     },
     start(onChange) {
@@ -57,8 +74,11 @@ export function createRouter(
       win.addEventListener("hashchange", onHashChange);
       onChange(current);
     },
-    navigate(route) {
-      win.location.hash = ROUTE_TO_HASH[route];
+    navigate(route, param) {
+      win.location.hash =
+        route === "run" && param
+          ? `#/run/${encodeURIComponent(param)}`
+          : ROUTE_TO_HASH[route];
     },
     stop() {
       win.removeEventListener("hashchange", onHashChange);

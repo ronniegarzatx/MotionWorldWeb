@@ -10,14 +10,19 @@ import { mountSensorDiagnosticsView } from "../dev/sensor-diagnostics-view.js";
 import { renderUnsupportedView } from "../dev/unsupported-view.js";
 import { readFlags, type Flags } from "./flags.js";
 import { AppStore } from "./app-store.js";
-import { createRouter, type Route } from "./router.js";
+import { createRouter, type Location } from "./router.js";
 import { mountShell } from "../ui/shell.js";
 import { mountHomeView } from "../ui/home/home-view.js";
 import { mountLiveLabView } from "../ui/live/live-lab-view.js";
 import { mountDataDisplayView } from "../ui/data/data-display-view.js";
 import { mountWalkTheLineView } from "../ui/walk/walk-the-line-view.js";
 import { TargetOffsets } from "../ui/walk/target-offsets.js";
+import { mountRunsListView } from "../ui/runs/runs-list-view.js";
+import { mountRunDetailView } from "../ui/runs/run-detail-view.js";
 import { installStartStopKey } from "../ui/keyboard.js";
+import { createRunStore } from "../store/create-run-store.js";
+import { startRunPersistence } from "../store/run-persistence.js";
+import type { RunStore } from "../store/run-store.js";
 
 export interface StartAppOptions {
   readonly container: HTMLElement;
@@ -27,19 +32,24 @@ export interface StartAppOptions {
   readonly flagsOverride?: Flags | undefined;
   /** injected for tests to supply a scriptable adapter. */
   readonly adapterOverride?: SensorAdapter | undefined;
+  /** injected for tests to supply a run store (skips IndexedDB). */
+  readonly runStoreOverride?: RunStore | undefined;
 }
 
-export function startApp(opts: StartAppOptions): {
+export interface RunningApp {
   teardown(): void;
   controller: AcquisitionController | null;
-} {
+  runStore: RunStore | null;
+}
+
+export async function startApp(opts: StartAppOptions): Promise<RunningApp> {
   const { container } = opts;
   const flags = opts.flagsOverride ?? readFlags();
 
   const hid = flags.fake ? null : (opts.hidOverride ?? getHid());
   if (!hid && !flags.fake && !opts.adapterOverride) {
     renderUnsupportedView(container);
-    return { teardown: () => container.replaceChildren(), controller: null };
+    return { teardown: () => container.replaceChildren(), controller: null, runStore: null };
   }
 
   const log = new DiagnosticLog(600);
@@ -73,12 +83,29 @@ export function startApp(opts: StartAppOptions): {
     ),
   );
 
+  const runStore: RunStore =
+    opts.runStoreOverride ??
+    (await createRunStore((reason) =>
+      log.add(`run storage: IndexedDB unavailable, using temporary storage (${String(reason)})`),
+    ));
+
+  const stopPersistence = startRunPersistence(controller, runStore, {
+    onSaved: (id) => log.add(`run ${id} saved`),
+    onError: (id, error) => log.add(`run ${id} not saved: ${String(error)}`),
+  });
+
+  // best-effort durable storage (truthful — never implied as guaranteed)
+  void navigator.storage?.persist?.().then(
+    (granted) => log.add(`storage.persist(): ${granted ? "granted" : "not granted"}`),
+    () => {},
+  );
+
   const offsets = new TargetOffsets();
   const appStore = new AppStore({ route: "home" });
   const router = createRouter(flags);
 
-  const mountRoute = (route: Route, main: HTMLElement): (() => void) => {
-    switch (route) {
+  const mountRoute = (location: Location, main: HTMLElement): (() => void) => {
+    switch (location.route) {
       case "home":
         return mountHomeView(main, { navigate: router.navigate });
       case "live":
@@ -87,6 +114,15 @@ export function startApp(opts: StartAppOptions): {
         return mountDataDisplayView(main, { controller });
       case "walk":
         return mountWalkTheLineView(main, { controller, offsets });
+      case "runs":
+        return mountRunsListView(main, { store: runStore, navigate: router.navigate });
+      case "run":
+        return mountRunDetailView(main, {
+          store: runStore,
+          runId: location.param ?? "",
+          navigate: router.navigate,
+          debug: flags.debugSensor,
+        });
       case "diagnostics":
         return mountSensorDiagnosticsView(main, {
           controller,
@@ -105,17 +141,17 @@ export function startApp(opts: StartAppOptions): {
     onShowDetails: (m) => log.add(`[shown to developer] ${m}`),
   });
 
-  let currentRoute: Route = router.route;
-  router.start((route) => {
+  const TOOLS = new Set(["live", "data", "walk"]);
+  let currentLocation: Location = router.location;
+  router.start((location) => {
     // leaving a tool never destroys the connection; an in-progress run is
-    // stopped with reason "navigation" and kept.
-    const wasTool = currentRoute === "live" || currentRoute === "data" || currentRoute === "walk";
-    if (wasTool && route !== currentRoute) {
+    // stopped with reason "navigation" and kept (then auto-saved).
+    if (TOOLS.has(currentLocation.route) && location.route !== currentLocation.route) {
       void controller.stopForNavigation();
     }
-    currentRoute = route;
-    appStore.setRoute(route);
-    shell.renderRoute(route);
+    currentLocation = location;
+    appStore.setRoute(location.route);
+    shell.renderLocation(location);
   });
 
   const uninstallKey = installStartStopKey(controller);
@@ -135,8 +171,10 @@ export function startApp(opts: StartAppOptions): {
 
   return {
     controller,
+    runStore,
     teardown() {
       uninstallKey();
+      stopPersistence();
       router.stop();
       shell.teardown();
       window.removeEventListener("unhandledrejection", onRejection);
@@ -153,4 +191,4 @@ function hexToBytes(hex: string): Uint8Array {
 
 // Auto-start in the browser (not under test).
 const root = typeof document !== "undefined" ? document.getElementById("app") : null;
-if (root) startApp({ container: root });
+if (root) void startApp({ container: root });

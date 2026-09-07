@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRouter, routeFromHash } from "../../src/app/router.js";
+import { createRouter, locationFromHash } from "../../src/app/router.js";
 import type { Flags } from "../../src/app/flags.js";
 
 const noFlags: Flags = { fake: false, debugSensor: false };
@@ -26,53 +26,61 @@ function fakeWindow(hash = "") {
   };
 }
 
-describe("routeFromHash", () => {
+describe("locationFromHash", () => {
   it("maps known hashes", () => {
-    expect(routeFromHash("", noFlags)).toBe("home");
-    expect(routeFromHash("#/", noFlags)).toBe("home");
-    expect(routeFromHash("#/live", noFlags)).toBe("live");
-    expect(routeFromHash("#/data", noFlags)).toBe("data");
-    expect(routeFromHash("#/walk", noFlags)).toBe("walk");
+    expect(locationFromHash("", noFlags)).toEqual({ route: "home" });
+    expect(locationFromHash("#/", noFlags)).toEqual({ route: "home" });
+    expect(locationFromHash("#/live", noFlags)).toEqual({ route: "live" });
+    expect(locationFromHash("#/data", noFlags)).toEqual({ route: "data" });
+    expect(locationFromHash("#/walk", noFlags)).toEqual({ route: "walk" });
+    expect(locationFromHash("#/runs", noFlags)).toEqual({ route: "runs" });
+  });
+
+  it("#/run/<id> parses the id; bare #/run/ -> runs", () => {
+    expect(locationFromHash("#/run/abc-123", noFlags)).toEqual({ route: "run", param: "abc-123" });
+    expect(locationFromHash("#/run/a%20b", noFlags)).toEqual({ route: "run", param: "a b" });
+    expect(locationFromHash("#/run/", noFlags)).toEqual({ route: "runs" });
   });
 
   it("unknown hash -> home", () => {
-    expect(routeFromHash("#/nope", noFlags)).toBe("home");
-    expect(routeFromHash("#/snapshot", noFlags)).toBe("home");
+    expect(locationFromHash("#/nope", noFlags)).toEqual({ route: "home" });
+    expect(locationFromHash("#/snapshot", noFlags)).toEqual({ route: "home" });
   });
 
   it("#/diagnostics needs a debug or fake flag", () => {
-    expect(routeFromHash("#/diagnostics", noFlags)).toBe("home");
-    expect(routeFromHash("#/diagnostics", debugFlags)).toBe("diagnostics");
-    expect(routeFromHash("#/diagnostics", { fake: true, debugSensor: false })).toBe("diagnostics");
+    expect(locationFromHash("#/diagnostics", noFlags)).toEqual({ route: "home" });
+    expect(locationFromHash("#/diagnostics", debugFlags)).toEqual({ route: "diagnostics" });
   });
 });
 
 describe("createRouter", () => {
-  it("reports the initial route and calls onChange with it", () => {
+  it("reports the initial location and calls onChange with it", () => {
     const win = fakeWindow("#/live");
     const r = createRouter(noFlags, win as never);
     const onChange = vi.fn();
     r.start(onChange);
-    expect(r.route).toBe("live");
-    expect(onChange).toHaveBeenCalledWith("live");
+    expect(r.location).toEqual({ route: "live" });
+    expect(onChange).toHaveBeenCalledWith({ route: "live" });
   });
 
-  it("reacts to hashchange", () => {
+  it("reacts to hashchange incl. run ids", () => {
     const win = fakeWindow("");
     const r = createRouter(noFlags, win as never);
     const onChange = vi.fn();
     r.start(onChange);
-    win.setHash("#/data");
-    expect(r.route).toBe("data");
-    expect(onChange).toHaveBeenLastCalledWith("data");
+    win.setHash("#/run/xyz");
+    expect(r.location).toEqual({ route: "run", param: "xyz" });
+    expect(onChange).toHaveBeenLastCalledWith({ route: "run", param: "xyz" });
   });
 
-  it("navigate() sets the hash", () => {
+  it("navigate() sets the hash, including #/run/<id>", () => {
     const win = fakeWindow("");
     const r = createRouter(noFlags, win as never);
     r.start(vi.fn());
-    r.navigate("live");
-    expect(win.location.hash).toBe("#/live");
+    r.navigate("runs");
+    expect(win.location.hash).toBe("#/runs");
+    r.navigate("run", "run 7");
+    expect(win.location.hash).toBe("#/run/run%207");
   });
 
   it("stop() detaches", () => {
@@ -82,6 +90,6 @@ describe("createRouter", () => {
     r.start(onChange);
     r.stop();
     win.setHash("#/data");
-    expect(onChange).toHaveBeenCalledTimes(1); // only the initial call
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

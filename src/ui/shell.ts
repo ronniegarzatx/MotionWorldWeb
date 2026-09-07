@@ -1,20 +1,20 @@
 import type { AcquisitionController } from "../acquisition/acquisition-controller.js";
 import type { Flags } from "../app/flags.js";
-import type { Route } from "../app/router.js";
+import type { Location, Route } from "../app/router.js";
 import { mountAcquisitionBar } from "./acquisition-bar.js";
 import { el } from "./components/dom.js";
 
 export interface ShellDeps {
   readonly controller: AcquisitionController;
   readonly flags: Flags;
-  readonly navigate: (route: Route) => void;
-  /** Mount the view for `route` into `main`; return its teardown. */
-  readonly mountRoute: (route: Route, main: HTMLElement) => () => void;
+  readonly navigate: (route: Route, param?: string) => void;
+  /** Mount the view for `location` into `main`; return its teardown. */
+  readonly mountRoute: (location: Location, main: HTMLElement) => () => void;
   readonly onShowDetails?: (message: string) => void;
 }
 
 export interface Shell {
-  renderRoute(route: Route): void;
+  renderLocation(location: Location): void;
   teardown(): void;
 }
 
@@ -31,6 +31,12 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
     deps.navigate("home");
   });
 
+  const runsLink = el("a", { className: "header-link", href: "#/runs", textContent: "Runs" });
+  runsLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    deps.navigate("runs");
+  });
+
   const barHost = el("span", { className: "acq-bar-host" });
   const devLink = el("a", {
     className: "dev-link",
@@ -45,6 +51,7 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
     wordmark,
     el("span", { className: "spacer" }),
     barHost,
+    runsLink,
     devLink,
   );
 
@@ -60,10 +67,10 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
   let teardownView: (() => void) | null = null;
 
   return {
-    renderRoute(route) {
+    renderLocation(location) {
       teardownView?.();
       main.replaceChildren();
-      teardownView = deps.mountRoute(route, main);
+      teardownView = deps.mountRoute(location, main);
     },
     teardown() {
       teardownView?.();
