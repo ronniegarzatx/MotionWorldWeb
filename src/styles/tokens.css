@@ -1,0 +1,11 @@
+:root {
+  --bg: #12141a;
+  --panel: #1b1e26;
+  --fg: #e8eaed;
+  --muted: #9aa0aa;
+  --accent: #4c9ffe;
+  --ok: #4caf7d;
+  --warn: #e0a44c;
+  --err: #e0685c;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
