@@ -25,10 +25,22 @@ position trace, completed a 1894-sample run, and stopped from the physical blue
 button — with no native helper, driver, backend, or admin rights. Direct WebHID
 is viable.
 
-**Now:** Milestone 1 — the Motion World application shell + five-tool Home
-(Live Lab & Data Display active) + a web-native design system, on top of the
-sensor/acquisition/model layer built and hardware-verified in M0. The spike's
-protocol diagnostics move behind `?debug=sensor`.
+**Now:** the Motion World application — a six-tool Home with **Live Lab**,
+**Data Display**, and **Walk the Line** active, on the sensor/acquisition/model
+layer built and hardware-verified in M0. Protocol diagnostics live behind
+`?debug=sensor`.
+
+- **Milestone 1** — app shell, Home, Live Lab, Data Display, shared acquisition
+  control, web-native dark-first design system.
+- **Milestone 1.5 — Walk the Line** — a **visual graph-match** instrument: a
+  fixed *target* position-vs-time graph with the student's **real sensor trace**
+  drawn live on top, in the same coordinate system. **No scoring** — no %, RMSE,
+  stars, grades, or leaderboards; the question is just "can you match this
+  graph?". 8 canonical targets (Stand Still · Walk Away · Walk Toward ·
+  Positive/Negative Constant Rate · Stop → Move · Stop → Move → Stop ·
+  Away → Pause → Toward). The live overlay is intentional. Reuses the Live Lab
+  SVG chart (`ui/chart/time-series-chart.ts`) with a `target` curve + plot
+  clipping; **fixed** axes from the target (unlike Live Lab's auto-scale).
 
 - Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
 - Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)

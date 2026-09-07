@@ -31,8 +31,10 @@ the *product knowledge and the numerical ideas*, not the desktop code.
 
 ## 2. Non-goals (explicit — do not build these in Web V1)
 
-- **No Inverse Lab, no Walk the Line, no Pendulum Lab.** (Native tools deliberately
-  left out of the browser V1 scope.)
+- **No Inverse Lab, no Pendulum Lab.** (Native tools deliberately left out of the
+  browser V1 scope.) — *Walk the Line was originally on this list; the human
+  approved a scoped, **no-scoring** version as Milestone 1.5 on 2026-09-07 (see
+  `docs/superpowers/plans/2026-09-07-milestone-1_5-walk-the-line.md`).*
 - **No standards browsing / standards filing UI / standards import.**
 - **No student accounts, teacher accounts, login, roster, or classroom "room codes".**
 - **No backend service of any kind.** No API server, no database server, no auth
@@ -658,7 +660,8 @@ class **D** (environment blocked), distinct from a hardware or protocol failure.
 | M | Deliverable | Gate |
 |---|---|---|
 | **0** | **WebHID feasibility spike** (Section 15) — ugly diagnostic page + the sensor/acquisition/model layer | **PASSED 2026-09-07** — class A, hardware-verified on the real PC. |
-| 1 | **App shell + Home (5 tiles, Live+Data active) + Live Lab + Data Display**; shared acquisition control; web-native design system; developer diagnostics behind `?debug=sensor` | projector audit passes; all software tests green; real-sensor acceptance on the Windows PC |
+| **1** | **App shell + Home (Live+Data active) + Live Lab + Data Display**; shared acquisition control; web-native design system; developer diagnostics behind `?debug=sensor` | software green + deployed; real-sensor acceptance pending on the Windows PC |
+| **1.5** | **Walk the Line** — fixed target graph + live student trace overlay, 8 canonical targets, **no scoring**; Home → 6 tiles | software green + deployed; real-sensor acceptance pending |
 | 2 | `AnalysisWindow`, `runStore` (IndexedDB + persist), Runs panel (Recent / Open / Delete / Clear) | store tests green; runs survive a reload |
 | 4 | **Speed Lab** — velocity/speed derivation + the two-slope teaching view | numerics ported + tested; slope-framing honest |
 | 5 | **Snapshot Lab** — window, Classroom transform, collapsed POINTS, fit families, classroom-approx vs precise, Show large | classroom-equation tests match native; POINTS-collapsed contract |
