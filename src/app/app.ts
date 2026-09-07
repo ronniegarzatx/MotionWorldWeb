@@ -15,6 +15,7 @@ import { mountShell } from "../ui/shell.js";
 import { mountHomeView } from "../ui/home/home-view.js";
 import { mountLiveLabView } from "../ui/live/live-lab-view.js";
 import { mountDataDisplayView } from "../ui/data/data-display-view.js";
+import { mountWalkTheLineView } from "../ui/walk/walk-the-line-view.js";
 import { installStartStopKey } from "../ui/keyboard.js";
 
 export interface StartAppOptions {
@@ -82,6 +83,8 @@ export function startApp(opts: StartAppOptions): {
         return mountLiveLabView(main, { controller });
       case "data":
         return mountDataDisplayView(main, { controller });
+      case "walk":
+        return mountWalkTheLineView(main, { controller });
       case "diagnostics":
         return mountSensorDiagnosticsView(main, {
           controller,
@@ -104,7 +107,8 @@ export function startApp(opts: StartAppOptions): {
   router.start((route) => {
     // leaving a tool never destroys the connection; an in-progress run is
     // stopped with reason "navigation" and kept.
-    if ((currentRoute === "live" || currentRoute === "data") && route !== currentRoute) {
+    const wasTool = currentRoute === "live" || currentRoute === "data" || currentRoute === "walk";
+    if (wasTool && route !== currentRoute) {
       void controller.stopForNavigation();
     }
     currentRoute = route;

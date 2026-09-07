@@ -1,12 +1,13 @@
 import type { Flags } from "./flags.js";
 
-export type Route = "home" | "live" | "data" | "diagnostics";
+export type Route = "home" | "live" | "data" | "walk" | "diagnostics";
 
 const HASH_TO_ROUTE: Record<string, Route> = {
   "": "home",
   "#/": "home",
   "#/live": "live",
   "#/data": "data",
+  "#/walk": "walk",
   "#/diagnostics": "diagnostics",
 };
 
@@ -14,6 +15,7 @@ const ROUTE_TO_HASH: Record<Route, string> = {
   home: "#/",
   live: "#/live",
   data: "#/data",
+  walk: "#/walk",
   diagnostics: "#/diagnostics",
 };
 

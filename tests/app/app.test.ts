@@ -64,6 +64,25 @@ describe("startApp", () => {
     expect(disconnectSpy).not.toHaveBeenCalled();
   });
 
+  it("#/walk mounts Walk the Line with the shared controller; leaving mid-run stops for navigation", async () => {
+    const { container, app } = boot();
+    const c = app.controller!;
+    location.hash = "#/walk";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(container.querySelector(".walk-lab")).not.toBeNull();
+    expect(container.querySelector(".walk-head__title")!.textContent).toBe("Walk the Line");
+
+    const stopNavSpy = vi.spyOn(c, "stopForNavigation");
+    await c.connect();
+    await c.arm();
+    await c.start();
+    vi.advanceTimersByTime(120);
+    location.hash = "#/";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(stopNavSpy).toHaveBeenCalled();
+    expect(c.lastCompletedRun()?.sampleCount).toBe(3);
+  });
+
   it("navigating away while MEASURING calls stopForNavigation and keeps the run", async () => {
     const { adapter, app } = boot();
     const c = app.controller!;

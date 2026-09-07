@@ -32,6 +32,7 @@ describe("routeFromHash", () => {
     expect(routeFromHash("#/", noFlags)).toBe("home");
     expect(routeFromHash("#/live", noFlags)).toBe("live");
     expect(routeFromHash("#/data", noFlags)).toBe("data");
+    expect(routeFromHash("#/walk", noFlags)).toBe("walk");
   });
 
   it("unknown hash -> home", () => {

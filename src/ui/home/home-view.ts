@@ -10,6 +10,7 @@ interface ToolTile {
 const TOOLS: readonly ToolTile[] = [
   { name: "Live Lab", route: "live", note: "Real-time position-vs-time graph" },
   { name: "Data Display", route: "data", note: "One huge position readout" },
+  { name: "Walk the Line", route: "walk", note: "Match a target motion graph" },
   { name: "Snapshot Lab", route: null, note: "Coming next" },
   { name: "Speed Lab", route: null, note: "Coming next" },
   { name: "Sequence Lab", route: null, note: "Coming next" },
