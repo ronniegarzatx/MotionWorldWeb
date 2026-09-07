@@ -178,9 +178,24 @@
 .chart-svg .trace {
   fill: none;
   stroke: var(--trace);
-  stroke-width: 2;
+  stroke-width: 2.5;
   stroke-linejoin: round;
   stroke-linecap: round;
+}
+
+/* Walk the Line: the fixed target curve — distinct by weight + dash + colour */
+.chart-svg .target {
+  fill: none;
+  stroke: var(--ink-dim);
+  stroke-width: 3;
+  stroke-dasharray: 9 7;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.chart-svg .overlay--model {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
 }
 
 .dev-link {

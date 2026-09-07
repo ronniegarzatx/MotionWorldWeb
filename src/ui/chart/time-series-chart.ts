@@ -23,6 +23,13 @@ export interface ChartInput {
   readonly overlays?: readonly { readonly d: string; readonly kind: "model" }[];
   readonly markers?: readonly { readonly t: number; readonly x: number }[];
   readonly selection?: { readonly startT: number; readonly endT: number };
+  /**
+   * A fixed reference curve (Walk the Line's target), drawn with distinct
+   * styling in the SAME coordinate system as `series`, behind the student trace.
+   * The plot area is clipped so an out-of-range `series` clips at the edge
+   * rather than painting over the axes.
+   */
+  readonly target?: { readonly t: readonly number[]; readonly x: readonly number[] };
 }
 
 export interface ChartHandle {
@@ -122,10 +129,14 @@ function svg<K extends keyof SVGElementTagNameMap>(
   return node;
 }
 
+let chartInstanceSeq = 0;
+
 export function mountChart(host: HTMLElement): ChartHandle {
   const root = svg("svg", { class: "chart-svg", preserveAspectRatio: "none" });
   root.setAttribute("role", "img");
   host.appendChild(root);
+
+  const clipId = `chart-plot-clip-${++chartInstanceSeq}`;
 
   let prevY: [number, number] | undefined;
   let lastInput: ChartInput | null = null;
@@ -206,20 +217,47 @@ export function mountChart(host: HTMLElement): ChartHandle {
       );
     }
 
+    // clip everything data-driven to the plot rectangle
+    const defs = svg("defs");
+    const clip = svg("clipPath", { id: clipId });
+    clip.appendChild(
+      svg("rect", {
+        x: plot.x0,
+        y: plot.y1,
+        width: Math.max(0, plot.x1 - plot.x0),
+        height: Math.max(0, plot.y0 - plot.y1),
+      }),
+    );
+    defs.appendChild(clip);
+    root.insertBefore(defs, g);
+
+    const gClip = svg("g", { "clip-path": `url(#${clipId})` });
+    g.appendChild(gClip);
+
     // overlays (model curves — Snapshot Lab)
     for (const overlay of input.overlays ?? []) {
-      g.appendChild(svg("path", { class: `overlay overlay--${overlay.kind}`, d: overlay.d }));
+      gClip.appendChild(svg("path", { class: `overlay overlay--${overlay.kind}`, d: overlay.d }));
     }
 
-    // the trace
+    // fixed reference curve (Walk the Line target) — behind the student trace
+    if (input.target) {
+      const targetD = buildPathD(
+        { t: input.target.t, x: input.target.x },
+        xScale,
+        yScale,
+      );
+      if (targetD) gClip.appendChild(svg("path", { class: "target", d: targetD }));
+    }
+
+    // the (student) trace
     const traceD = buildPathD(input.series, xScale, yScale);
     const trace = svg("path", { class: "trace" });
     if (traceD) trace.setAttribute("d", traceD);
-    g.appendChild(trace);
+    gClip.appendChild(trace);
 
     // markers
     for (const m of input.markers ?? []) {
-      g.appendChild(svg("circle", { class: "marker", cx: xScale(m.t), cy: yScale(m.x), r: 3 }));
+      gClip.appendChild(svg("circle", { class: "marker", cx: xScale(m.t), cy: yScale(m.x), r: 3 }));
     }
   };
 
