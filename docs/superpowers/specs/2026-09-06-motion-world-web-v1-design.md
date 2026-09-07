@@ -73,7 +73,8 @@ the *product knowledge and the numerical ideas*, not the desktop code.
   browser shows its own device chooser; the site cannot enumerate devices silently.
 - **One granted device per origin per profile**, remembered across sessions
   (`navigator.hid.getDevices()` returns previously-granted devices), but a
-  `connect()` still needs the physical device present.
+  `connect()` still needs the physical device present. See Section 15.5 for the
+  exact V1 contract on initial pairing vs. reconnect after refresh.
 - **School-managed browsers** may disable WebHID by enterprise policy
   (`WebHidAllowDevicesForUrls` / blocklist). This is an environmental risk the
   feasibility spike must probe on the actual work PC (Section 15).
@@ -575,7 +576,8 @@ EVENT LOG
 7. **Unplug** → a clean "device lost" event (no crash); **replug + Connect** (or
    auto-reconnect) works again.
 8. **Refresh the page** → the previously granted device reconnects (silently or
-   with one click), no second OS/permission dance.
+   with one click), no second OS/permission dance. **This is a SHOULD, not a hard
+   PASS gate** — see Section 15.5.
 
 ### 15.4 FAIL handling
 If any of 1–5 cannot be made to work reliably, **stop and report precisely why**
@@ -589,6 +591,43 @@ before any lab UI is built. Candidate findings to document:
 - Sample rate / jitter unusable for a classroom graph → report measured numbers.
 - Device needs a Windows driver to enumerate → report; that may end the
   zero-install premise and is a decision for the human.
+
+### 15.5 WebHID pairing, reconnect, and secure-context contract (V1)
+
+**Initial pairing (hard requirement).**
+`navigator.hid.requestDevice({ filters })` **requires an explicit user gesture** —
+a click on **CONNECT SENSOR**. The browser then shows its own device chooser; the
+site cannot enumerate or open a device without the user picking it there. This
+prompt-on-first-use behaviour is normal, expected, and must not be treated as a
+defect.
+
+**Previously granted sensor (SHOULD, not a hard V1 PASS requirement).**
+On later page loads the app calls `navigator.hid.getDevices()` to retrieve the
+`HIDDevice` objects the origin was already granted, and **attempts to reopen /
+reconnect automatically** when browser behaviour permits (device present, no
+policy change). This automatic silent reconnect after a page refresh, browser
+restart, or reboot is **desired but optional**:
+
+- If Chrome / Edge reconnects silently → good, report it.
+- If Chrome / Edge requires the user to click **RECONNECT SENSOR** after a
+  refresh / restart → **that is acceptable.** The app presents a single clear
+  **RECONNECT SENSOR** control (distinct from the first-time **CONNECT SENSOR**,
+  because no second OS permission dialog is involved — the grant persists).
+- **Do NOT reject the WebHID architecture solely because a reconnect click is
+  required.** A required reconnect click is a minor limitation (feasibility
+  class **B**), never a class **E** failure.
+
+**Secure context (hard requirement in deployment).**
+WebHID is only available in a **secure context**. In normal deployment the app
+**must be served over HTTPS** (static hosting is sufficient — Section 9).
+`http://localhost` is also a secure context and **may be used during
+development** and for a locally-served copy on the test PC.
+
+**Policy / environment (out of the app's control).**
+Browser or organisation policy (`WebHidAllowDevicesForUrls`, enterprise
+blocklists, or WebHID disabled entirely) **may disable WebHID** regardless of
+HTTPS and user gesture. The spike must detect this and report it as feasibility
+class **D** (environment blocked), distinct from a hardware or protocol failure.
 
 ## 16. Milestone sequence (after this spec + a plan are approved)
 
@@ -686,6 +725,10 @@ before any lab UI is built. Candidate findings to document:
   as explicit non-goals and absent from Home, routes, and milestones.
 - [x] **WebHID uncertainty explicitly acknowledged** — Sections 3, 15.4, 18, 19,
   and the Milestone-0 FAIL path.
+- [x] **WebHID pairing / reconnect / secure-context contract pinned** — Section
+  15.5: gesture-gated first pairing is expected; silent reconnect after refresh is
+  a SHOULD not a PASS gate; a required RECONNECT SENSOR click is class B, not E;
+  HTTPS required in deployment, localhost allowed in dev; policy block is class D.
 - [x] **Feasibility spike precedes lab port** — Milestone 0, with a hard PASS
   gate; "do not build the five labs first" stated twice.
 - [x] **Saved runs use browser-local persistence** — IndexedDB + `persist()`,
