@@ -59,8 +59,23 @@ layer built and hardware-verified in M0. Protocol diagnostics live behind
 npm ci
 npm run dev            # http://localhost:5173  (a secure context for WebHID)
 npm test               # unit tests, no hardware needed
-npm run build          # static output in dist/  (deploy anywhere over HTTPS)
+npm run build          # normal web build -> dist/  (multi-file, GitHub Pages)
+npm run build:portable # self-contained offline build -> dist-portable/MotionWorld.html
 ```
+
+**One source tree, two build targets.** `npm run build` is the known
+hardware-verified deployment (the GitHub Pages HTTPS site). `npm run build:portable`
+runs the same Vite build and then inlines the single CSS bundle and single JS
+bundle into **one file** — `dist-portable/MotionWorld.html` — with no sibling
+assets, no CDN, no fonts, no network dependency. Open it directly (`file://`) or
+copy it anywhere.
+
+> **`file://` + hardware:** the portable file's UI (Home, Live Lab, Data Display,
+> Walk the Line, `?fake`) works offline. Whether **WebHID** works from `file://`
+> is browser/platform-dependent and **must be physically verified** — open
+> `MotionWorld.html?debug=sensor` and read the Environment panel (protocol /
+> secure context / WebHID available). Do not assume; the HTTPS build remains the
+> verified path.
 
 URL flags:
 

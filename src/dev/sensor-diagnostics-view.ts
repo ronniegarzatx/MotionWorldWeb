@@ -3,6 +3,7 @@ import { summariseTiming } from "../model/sample-timing.js";
 import type { DiagnosticLog } from "./diagnostic-log.js";
 import type { RawReportRing } from "./raw-report-ring.js";
 import type { MotionSample } from "../sensor/types.js";
+import { describeEnvironment, formatEnvironmentReport, readEnv } from "./environment-report.js";
 
 export interface SensorDiagnosticsDeps {
   readonly controller: AcquisitionController;
@@ -57,8 +58,14 @@ export function mountSensorDiagnosticsView(
   const clearRawBtn = el("button", { textContent: "CLEAR" });
   const rawCount = el("span", { className: "diag" });
 
+  const envPre = el("pre", {
+    className: "device-info",
+    textContent: formatEnvironmentReport(describeEnvironment(readEnv())),
+  });
+
   root.append(
     el("h2", { textContent: "Sensor Diagnostics — developer" }),
+    el("section", {}, el("h2", {}, "Environment"), envPre),
     el("div", { className: "row" }, connectBtn, reconnectBtn, disconnectBtn),
     el(
       "div",

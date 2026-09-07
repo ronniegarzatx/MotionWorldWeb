@@ -41,6 +41,9 @@ jobs:
       - name: Build static site
         run: npm run build
 
+      - name: Portable single-file build (self-checks)
+        run: npm run build:portable
+
       - name: Configure Pages
         uses: actions/configure-pages@v6
 

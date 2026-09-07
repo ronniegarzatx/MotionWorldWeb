@@ -36,6 +36,18 @@ describe("sensor-diagnostics-view", () => {
     const { container } = setup();
     expect(container.querySelector(".diagnostics h2")!.textContent).toMatch(/Diagnostics/i);
     expect(byText(container, "CONNECT SENSOR")).toBeTruthy();
+  });
+
+  it("shows an Environment panel with protocol / secure context / WebHID", () => {
+    const { container } = setup();
+    const headings = [...container.querySelectorAll(".diagnostics h2")].map((h) => h.textContent);
+    expect(headings).toContain("Environment");
+    const env = [...container.querySelectorAll(".device-info")]
+      .map((p) => p.textContent ?? "")
+      .find((t) => t.includes("origin / protocol"));
+    expect(env).toBeTruthy();
+    expect(env).toMatch(/secure context/);
+    expect(env).toMatch(/WebHID API/);
     expect(byText(container, "START").disabled).toBe(true);
     expect(container.querySelector(".readout .big")!.textContent).toBe("—");
   });
