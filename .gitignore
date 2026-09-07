@@ -1,0 +1,12 @@
+# Motion World Web — nothing is scaffolded yet; these are for when it is.
+node_modules/
+dist/
+.vite/
+*.local
+.DS_Store
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# captured HID traffic from the feasibility spike goes in docs/, not here
