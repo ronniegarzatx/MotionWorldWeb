@@ -1,11 +1,58 @@
+/*
+ * Motion World Web — design tokens. Dark-first for Milestone 1 (a light theme is
+ * Milestone 7). Semantic names only; components never hard-code a hex value.
+ */
 :root {
-  --bg: #12141a;
-  --panel: #1b1e26;
-  --fg: #e8eaed;
-  --muted: #9aa0aa;
+  color-scheme: dark;
+
+  /* surfaces & ink */
+  --surface: #0e1014;
+  --surface-raised: #171a21;
+  --surface-inset: #0a0c10;
+  --border: #262b35;
+  --ink: #eef1f5;
+  --ink-dim: #a8afbd;
+  --ink-faint: #6b7280;
+
+  /* accents */
   --accent: #4c9ffe;
+  --accent-ink: #06121f;
+  --trace: #5ad1a8; /* the live position trace */
+  --grid: #232935;
+
+  /* status */
   --ok: #4caf7d;
   --warn: #e0a44c;
   --err: #e0685c;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 40px;
+  --s-7: 64px;
+
+  /* radius / focus */
+  --radius: 8px;
+  --radius-lg: 14px;
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+
+  /* fluid type — scales with the viewport for projector legibility */
+  --font-ui: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --type-label: clamp(0.7rem, 0.6rem + 0.4vw, 0.9rem);
+  --type-body: clamp(0.9rem, 0.8rem + 0.4vw, 1.05rem);
+  --type-h2: clamp(1rem, 0.8rem + 0.9vw, 1.4rem);
+  --type-h1: clamp(1.2rem, 0.9rem + 1.4vw, 1.9rem);
+  --type-stat: clamp(1.6rem, 1rem + 3vw, 3rem);
+  --type-hero: clamp(3.5rem, 1rem + 14vw, 12rem); /* Data Display */
+
+  /* legacy aliases used by the developer diagnostics view */
+  --bg: var(--surface);
+  --panel: var(--surface-raised);
+  --fg: var(--ink);
+  --muted: var(--ink-dim);
+  --mono: var(--font-mono);
 }

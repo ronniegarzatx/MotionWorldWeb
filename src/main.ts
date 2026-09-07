@@ -1,4 +1,4 @@
-import "./styles/app.css";
+import "./styles/index.css";
 import { AcquisitionController } from "./acquisition/acquisition-controller.js";
 import { getHid } from "./sensor/hid.js";
 import { GoMotionWebHIDAdapter } from "./sensor/go-motion-webhid.js";
