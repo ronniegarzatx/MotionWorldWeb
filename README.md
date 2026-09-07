@@ -30,6 +30,11 @@ Windows work PC, before any lab is written.
 - Windows test procedure: [`docs/research/webhid-spike-windows-test.md`](docs/research/webhid-spike-windows-test.md)
 - Readiness report: [`docs/research/milestone-zero-ready.md`](docs/research/milestone-zero-ready.md)
 
+**Live spike (for the Windows + CBR 2 test):**
+<https://ronniegarzatx.github.io/MotionWorldWeb/> — deployed from `main` by
+[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)
+(GitHub Actions → Pages, static, no backend).
+
 ### Running the spike
 
 ```
