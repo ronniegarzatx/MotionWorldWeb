@@ -18,15 +18,43 @@ No account. Completed runs are saved **locally in the browser** (IndexedDB).
 
 ## Status
 
-**Design phase.** This repository currently contains only the architectural
-design spec:
+**Milestone Zero — WebHID sensor spike (software complete, awaiting the
+physical test).** The design spec is approved; the only thing built so far is a
+deliberately tiny diagnostic page whose sole job is to answer *"can current
+Chrome / Edge directly operate the real CBR 2 / Go!Motion?"* on the user's
+Windows work PC, before any lab is written.
 
-- [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
+- Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
+- Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)
+- Protocol research: [`docs/research/go-motion-webhid-protocol.md`](docs/research/go-motion-webhid-protocol.md)
+- Windows test procedure: [`docs/research/webhid-spike-windows-test.md`](docs/research/webhid-spike-windows-test.md)
+- Readiness report: [`docs/research/milestone-zero-ready.md`](docs/research/milestone-zero-ready.md)
 
-Nothing is implemented yet. The spec is **awaiting human review**. After it is
-approved, the next steps are an implementation plan and then **Milestone Zero**:
-a deliberately tiny WebHID sensor spike to prove the browser can talk to the
-CBR 2 on the target hardware *before* any lab UI is built.
+### Running the spike
+
+```
+npm ci
+npm run dev            # http://localhost:5173  (a secure context for WebHID)
+npm test               # 84 unit tests, no hardware needed
+npm run build          # static output in dist/  (deploy anywhere over HTTPS)
+```
+
+URL flags:
+
+- `?fake` — run against `FakeSensorAdapter` (no hardware; use this on the Mac).
+- `?broad` — **development only**: widen the HID chooser to any Vernier device
+  to identify an unknown sensor. Not the default; logged loudly.
+
+> `npm` in this environment gates package install scripts; `package.json`
+> carries an `allowScripts` entry for the exact `esbuild` build. If you bump
+> `vite`/`vitest`, run `npm install-scripts approve esbuild` once.
+
+### Architecture boundary (enforced)
+
+`navigator.hid` is named in exactly one file (`src/sensor/hid.ts`). HID report
+bytes live in exactly one production module (`src/sensor/go-motion-webhid.ts`)
+plus its pure helpers. The UI issues intents to `AcquisitionController` and
+never touches HID. See the plan for the full module map.
 
 ## Scope (V1)
 
@@ -50,10 +78,10 @@ no networking code.
 
 ## Tech (planned)
 
-Vite · TypeScript · browser-native DOM + CSS (no React unless a concrete V1
-reason appears) · WebHID · IndexedDB · Vitest + Playwright. No Pyodide, no
-SciPy/NumPy — numerical routines are ported to focused TypeScript modules whose
-tests mirror the native suite.
+Vite · TypeScript (`strict`) · browser-native DOM + CSS (no React unless a
+concrete V1 reason appears) · WebHID · IndexedDB (from Milestone 2) · Vitest
+(+ Playwright later). No Pyodide, no SciPy/NumPy — numerical routines are ported
+to focused TypeScript modules whose tests mirror the native suite.
 
 ## Relationship to the native app
 
