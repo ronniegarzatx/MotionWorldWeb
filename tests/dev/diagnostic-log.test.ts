@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DiagnosticLog } from "../../src/spike/diagnostic-log.js";
+import { DiagnosticLog } from "../../src/dev/diagnostic-log.js";
 
 describe("DiagnosticLog", () => {
   it("prepends timestamped lines and caps length", () => {

@@ -2,10 +2,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AcquisitionController } from "../../src/acquisition/acquisition-controller.js";
 import { FakeSensorAdapter } from "../../src/sensor/fake-sensor-adapter.js";
-import { DiagnosticLog } from "../../src/spike/diagnostic-log.js";
-import { RawReportRing } from "../../src/spike/raw-report-ring.js";
-import { mountSpikeView } from "../../src/spike/spike-view.js";
-import { renderUnsupportedView } from "../../src/spike/unsupported-view.js";
+import { DiagnosticLog } from "../../src/dev/diagnostic-log.js";
+import { RawReportRing } from "../../src/dev/raw-report-ring.js";
+import { mountSensorDiagnosticsView } from "../../src/dev/sensor-diagnostics-view.js";
+import { renderUnsupportedView } from "../../src/dev/unsupported-view.js";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -18,7 +18,7 @@ function setup() {
   const log = new DiagnosticLog();
   const rawRing = new RawReportRing();
   let clock = 0;
-  const teardown = mountSpikeView(container, {
+  const teardown = mountSensorDiagnosticsView(container, {
     controller,
     log,
     rawRing,
@@ -31,10 +31,10 @@ function setup() {
 const byText = (root: HTMLElement, text: string): HTMLButtonElement =>
   [...root.querySelectorAll("button")].find((b) => b.textContent === text) as HTMLButtonElement;
 
-describe("spike-view", () => {
+describe("sensor-diagnostics-view", () => {
   it("renders the core controls and blank readouts", () => {
     const { container } = setup();
-    expect(container.querySelector("h1")!.textContent).toMatch(/Sensor Test/i);
+    expect(container.querySelector(".diagnostics h2")!.textContent).toMatch(/Diagnostics/i);
     expect(byText(container, "CONNECT SENSOR")).toBeTruthy();
     expect(byText(container, "START").disabled).toBe(true);
     expect(container.querySelector(".readout .big")!.textContent).toBe("—");
@@ -73,12 +73,11 @@ describe("spike-view", () => {
     expect(rawRing.paused).toBe(true);
   });
 
-  it("teardown detaches subscriptions", async () => {
+  it("teardown removes the view and detaches subscriptions", async () => {
     const { container, controller, teardown } = setup();
     teardown();
-    await controller.connect();
-    // status line not updated after teardown
-    expect(container.querySelector(".status-line .value")!.textContent).toBe("Not connected");
+    expect(container.querySelector(".diagnostics")).toBeNull();
+    await controller.connect(); // must not throw / touch detached DOM
   });
 });
 

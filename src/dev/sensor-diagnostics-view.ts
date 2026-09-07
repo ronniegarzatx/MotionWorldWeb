@@ -4,7 +4,7 @@ import type { DiagnosticLog } from "./diagnostic-log.js";
 import type { RawReportRing } from "./raw-report-ring.js";
 import type { MotionSample } from "../sensor/types.js";
 
-export interface SpikeViewDeps {
+export interface SensorDiagnosticsDeps {
   readonly controller: AcquisitionController;
   readonly log: DiagnosticLog;
   readonly rawRing: RawReportRing;
@@ -22,10 +22,14 @@ const el = <K extends keyof HTMLElementTagNameMap>(
   return node;
 };
 
-export function mountSpikeView(container: HTMLElement, deps: SpikeViewDeps): () => void {
+export function mountSensorDiagnosticsView(
+  container: HTMLElement,
+  deps: SensorDiagnosticsDeps,
+): () => void {
   const { controller, log, rawRing, getDeviceInfoText } = deps;
   const now = deps.now ?? (() => (typeof performance !== "undefined" ? performance.now() : Date.now()));
-  container.innerHTML = "";
+  const root = el("div", { className: "diagnostics" });
+  container.append(root);
 
   const connectBtn = el("button", { className: "primary", textContent: "CONNECT SENSOR" });
   const reconnectBtn = el("button", { textContent: "RECONNECT SENSOR" });
@@ -53,8 +57,8 @@ export function mountSpikeView(container: HTMLElement, deps: SpikeViewDeps): () 
   const clearRawBtn = el("button", { textContent: "CLEAR" });
   const rawCount = el("span", { className: "diag" });
 
-  container.append(
-    el("h1", { textContent: "Motion World — Sensor Test" }),
+  root.append(
+    el("h2", { textContent: "Sensor Diagnostics — developer" }),
     el("div", { className: "row" }, connectBtn, reconnectBtn, disconnectBtn),
     el(
       "div",
@@ -221,5 +225,6 @@ export function mountSpikeView(container: HTMLElement, deps: SpikeViewDeps): () 
   return () => {
     clearInterval(rawTimer);
     for (const u of unsubs) u();
+    root.remove();
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RawReportRing } from "../../src/spike/raw-report-ring.js";
+import { RawReportRing } from "../../src/dev/raw-report-ring.js";
 
 describe("RawReportRing", () => {
   it("stores hex + length, newest first", () => {
