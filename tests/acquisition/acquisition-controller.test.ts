@@ -65,7 +65,7 @@ describe("AcquisitionController", () => {
     expect(runs.every((r) => r.sampleCount === 5)).toBe(true);
   });
 
-  it("device-lost during MEASURING -> DEVICE_LOST + partial run preserved", async () => {
+  it("device-lost during MEASURING -> DEVICE_LOST + partial run preserved with reason", async () => {
     const { adapter, controller, states, runs } = setup();
     await controller.connect();
     await controller.arm();
@@ -76,6 +76,7 @@ describe("AcquisitionController", () => {
     expect(controller.uiState.lastStopReason).toBe("device_lost");
     expect(runs).toHaveLength(1);
     expect(runs[0]!.sampleCount).toBe(3);
+    expect(runs[0]!.stopReason).toBe("device_lost");
   });
 
   it("Start intent while only SYSTEM_READY is a no-op (adapter.start not called)", async () => {

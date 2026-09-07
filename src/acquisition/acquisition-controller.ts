@@ -224,6 +224,7 @@ export class AcquisitionController {
       samplerHz: this.samplerHz,
       source: this.adapter.kind === "fake" ? "fake" : "sensor",
       deviceLabel: this.adapter.deviceLabel,
+      stopReason: this.snap.lastStopReason,
     });
     this.buffer = [];
     this.lastRun = run;

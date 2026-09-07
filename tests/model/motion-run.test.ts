@@ -38,6 +38,20 @@ describe("makeMotionRun", () => {
     ).toBe(0);
   });
 
+  it("carries a stop reason, defaulting to null", () => {
+    const a = makeMotionRun({ samples: [], samplerHz: 25, source: "fake", deviceLabel: null });
+    expect(a.stopReason).toBeNull();
+    const b = makeMotionRun({
+      samples: [],
+      samplerHz: 25,
+      source: "sensor",
+      deviceLabel: null,
+      stopReason: "device_lost",
+    });
+    expect(b.stopReason).toBe("device_lost");
+    expect(Object.isFrozen(b)).toBe(true);
+  });
+
   it("honours injected id and startedAtEpochMs", () => {
     const run = makeMotionRun({
       samples: [],

@@ -19,13 +19,8 @@ export type AcquisitionState =
   | "DEVICE_LOST"
   | "ERROR";
 
-export type StopReason =
-  | "ui"
-  | "trigger"
-  | "navigation"
-  | "device_lost"
-  | "error"
-  | null;
+import type { StopReason } from "../model/stop-reason.js";
+export type { StopReason };
 
 export interface AcquisitionSnapshot {
   readonly state: AcquisitionState;

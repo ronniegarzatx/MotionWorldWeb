@@ -1,4 +1,5 @@
 import type { MotionSample } from "./motion-sample.js";
+import type { StopReason } from "./stop-reason.js";
 
 /**
  * MotionRun — an immutable completed acquisition.
@@ -18,6 +19,8 @@ export interface MotionRun {
   readonly samplerHz: number;
   readonly source: MotionRunSource;
   readonly deviceLabel: string | null;
+  /** Why the run stopped. `null` for runs whose reason is unknown. */
+  readonly stopReason: StopReason;
 }
 
 export interface MakeMotionRunInput {
@@ -25,6 +28,8 @@ export interface MakeMotionRunInput {
   readonly samplerHz: number;
   readonly source: MotionRunSource;
   readonly deviceLabel: string | null;
+  /** Defaults to null. */
+  readonly stopReason?: StopReason;
   /** Defaults to Date.now(); injectable for tests. */
   readonly startedAtEpochMs?: number;
   /** Defaults to a random UUID; injectable for tests. */
@@ -58,5 +63,6 @@ export function makeMotionRun(input: MakeMotionRunInput): MotionRun {
     samplerHz: input.samplerHz,
     source: input.source,
     deviceLabel: input.deviceLabel,
+    stopReason: input.stopReason ?? null,
   });
 }
