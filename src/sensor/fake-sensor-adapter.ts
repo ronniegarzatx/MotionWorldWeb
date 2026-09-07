@@ -46,6 +46,7 @@ export class FakeSensorAdapter implements SensorAdapter {
 
   private pendingConnectError: SensorError | null = null;
   private cancelNextConnect = false;
+  private heldConnect: (() => void) | null = null;
 
   constructor(opts: FakeSensorOptions = {}) {
     this._label = opts.deviceLabel ?? "CBR 2 / Go!Motion (fake)";
@@ -81,10 +82,27 @@ export class FakeSensorAdapter implements SensorAdapter {
     this._error = null;
     this.setStatus("device_lost");
   }
+  /** Make the next connect()/reconnect() stay in the connecting state until released. */
+  holdNextConnect(): void {
+    this.heldConnect = () => {};
+  }
+  releaseHeldConnect(): void {
+    const r = this.heldConnect;
+    this.heldConnect = null;
+    r?.();
+  }
 
   // ── SensorAdapter ─────────────────────────────────────────────────────────
+  private async waitIfHeld(): Promise<void> {
+    if (!this.heldConnect) return;
+    await new Promise<void>((resolve) => {
+      this.heldConnect = resolve;
+    });
+  }
+
   async connect(): Promise<void> {
     this.setStatus("connecting");
+    await this.waitIfHeld();
     if (this.cancelNextConnect) {
       this.cancelNextConnect = false;
       this._error = { code: "no_device_selected", message: "user cancelled the chooser" };
@@ -104,6 +122,7 @@ export class FakeSensorAdapter implements SensorAdapter {
   async reconnect(): Promise<boolean> {
     if (this._status !== "no_device" && this._status !== "device_lost") return false;
     this.setStatus("reconnecting");
+    await this.waitIfHeld();
     this._error = null;
     this.setStatus("system_ready");
     return true;
