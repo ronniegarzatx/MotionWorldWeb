@@ -18,11 +18,17 @@ No account. Completed runs are saved **locally in the browser** (IndexedDB).
 
 ## Status
 
-**Milestone Zero — WebHID sensor spike (software complete, awaiting the
-physical test).** The design spec is approved; the only thing built so far is a
-deliberately tiny diagnostic page whose sole job is to answer *"can current
-Chrome / Edge directly operate the real CBR 2 / Go!Motion?"* on the user's
-Windows work PC, before any lab is written.
+**Milestone Zero — PASSED (2026-09-07), feasibility class A, hardware-verified.**
+On a Windows work PC in Chrome via the GitHub Pages HTTPS URL, a real Vernier
+**Go! Motion ver 1.02** connected, auto-reconnected, armed, streamed a 25 Hz
+position trace, completed a 1894-sample run, and stopped from the physical blue
+button — with no native helper, driver, backend, or admin rights. Direct WebHID
+is viable.
+
+**Now:** Milestone 1 — the Motion World application shell + five-tool Home
+(Live Lab & Data Display active) + a web-native design system, on top of the
+sensor/acquisition/model layer built and hardware-verified in M0. The spike's
+protocol diagnostics move behind `?debug=sensor`.
 
 - Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
 - Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)

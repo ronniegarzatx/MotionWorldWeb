@@ -506,10 +506,27 @@ MotionWorldWeb/
   never claimed as automated.
 - CI runs Vitest + Playwright headless; **no hardware in CI**.
 
-## 15. Feasibility spike — Milestone Zero (the FIRST thing built after the plan)
+## 15. Feasibility spike — Milestone Zero
 
-**Milestone Zero is a deliberately tiny WebHID sensor spike. Do not build the five
-labs first. Do not build polished UI.**
+> **STATUS: PASSED (2026-09-07) — feasibility class A, DIRECT WEBHID VIABLE,
+> HARDWARE VERIFIED.** Windows work PC + Chrome + GitHub Pages HTTPS + Vernier
+> **Go! Motion ver 1.02** (VID `0x08F7`, PID `0x0004`). No native helper, Python
+> service, Motion World driver, backend, or admin rights required. Confirmed on
+> real hardware: plain-HID enumeration; INIT round-trip; `SET_PERIOD` + `START` +
+> real distance stream at **25.0 Hz / ~40 ms**; a **1894-sample, 75.7 s**
+> completed `MotionRun`; physical blue-button **STOP**; auto-reconnect of a
+> previously granted device on startup; `micron × 1e-6 → metres` plausible across
+> ≈ 0.16–4.30 m. Details: `docs/research/go-motion-webhid-protocol.md` §0.
+> Not yet demonstrated (small follow-ups, non-blocking): physical-button START,
+> a deliberate unplug/replug cycle, many-cycle + >5-min endurance, formal
+> calibration.
+>
+> The architectural risk that justified the spike is **retired**. Development now
+> proceeds as the Motion World application (Milestone 1+), with the spike's
+> protocol diagnostics kept behind a developer route.
+
+**Milestone Zero was a deliberately tiny WebHID sensor spike. It did not build
+the five labs or polished UI.**
 
 ### 15.1 What it is
 A single page: a **Connect Sensor** button, a **Start/Stop** pair, a plain table
@@ -631,12 +648,18 @@ class **D** (environment blocked), distinct from a hardware or protocol failure.
 
 ## 16. Milestone sequence (after this spec + a plan are approved)
 
+> **2026-09-07 re-plan:** M0 passed; the M1–M3 rows below are consolidated. The
+> live **Milestone 1** is *App shell + five-tool Home (Live + Data active) +
+> Live Lab + Data Display*, driven by
+> `docs/superpowers/plans/2026-09-07-motion-world-web-milestone-1.md`. The
+> `SensorAdapter` / `GoMotionWebHIDAdapter` / `AcquisitionController` /
+> `MotionSample` / `MotionRun` layer was built and hardware-verified during M0.
+
 | M | Deliverable | Gate |
 |---|---|---|
-| **0** | **WebHID feasibility spike** (Section 15) — ugly diagnostic page only | **PASS criterion 15.3 on the real PC.** If fail: report, stop. |
-| 1 | `SensorAdapter` + `GoMotionWebHIDAdapter` (hardened from the spike) + `ReplayAdapter` + `AcquisitionController` + state machine, all unit-tested; a trivial Live trace on top | controller tests green; adapter tests vs captured traffic green |
-| 2 | `MotionRun`, `AnalysisWindow`, `runStore` (IndexedDB + persist), Runs panel (Recent / Open / Delete / Clear) | store tests green; runs survive a reload |
-| 3 | **Live Lab** + **Data Display** — projector-first, real graph/readout, full status strip | projector-legibility pass |
+| **0** | **WebHID feasibility spike** (Section 15) — ugly diagnostic page + the sensor/acquisition/model layer | **PASSED 2026-09-07** — class A, hardware-verified on the real PC. |
+| 1 | **App shell + Home (5 tiles, Live+Data active) + Live Lab + Data Display**; shared acquisition control; web-native design system; developer diagnostics behind `?debug=sensor` | projector audit passes; all software tests green; real-sensor acceptance on the Windows PC |
+| 2 | `AnalysisWindow`, `runStore` (IndexedDB + persist), Runs panel (Recent / Open / Delete / Clear) | store tests green; runs survive a reload |
 | 4 | **Speed Lab** — velocity/speed derivation + the two-slope teaching view | numerics ported + tested; slope-framing honest |
 | 5 | **Snapshot Lab** — window, Classroom transform, collapsed POINTS, fit families, classroom-approx vs precise, Show large | classroom-equation tests match native; POINTS-collapsed contract |
 | 6 | **Sequence Lab** — Timed + Manual, Arithmetic + Geometric, n=0/n=1, explicit/recursive, analysis range | sequence-engine tests |

@@ -20,11 +20,14 @@ base protocol (`GSkipComm.h` / `GSkipCommExt.h`); Cyclops adds a few extensions
 
 ---
 
-## 0. HARDWARE-CONFIRMED — first Windows + Go!Motion test (2026-09-07)
+## 0. HARDWARE-CONFIRMED — Windows + Chrome + Vernier Go!Motion (2026-09-07)
 
-Chrome on the user's Windows work PC, device picker + `GoMotionWebHIDAdapter`.
+Two real sessions on the user's Windows work PC, Chrome, GitHub Pages HTTPS,
+`GoMotionWebHIDAdapter`. **Milestone Zero verdict: PASS — feasibility class A
+(direct WebHID viable). No native helper, Python service, Motion World driver,
+backend, or admin rights were required.**
 
-**Confirmed facts:**
+### 0.a Device identity + HID descriptor — CONFIRMED
 
 | Fact | Value |
 |---|---|
@@ -34,23 +37,67 @@ Chrome on the user's Windows work PC, device picker + `GoMotionWebHIDAdapter`.
 | Windows driver | **none** — enumerated as plain HID, `opened: true`, no install, no admin |
 | HID collections | **1**, `usagePage 0xFF00`, `usage 0x01` (vendor-defined) |
 | report id | **`0`** for all three report types |
-| input report | id 0, **8 bytes** (`8x8bit`) |
-| output report | id 0, **8 bytes** — **`sendReport(0, …)` physically works** (the predicted feature-only blocker did **not** occur) |
-| feature report | id 0, 8 bytes (present, unused by us) |
-| INIT request (host→device) | `1a 02 00 00 00 00 00 00` — sent and accepted |
-| INIT response (device→host) | **`9a 1a 00 00 00 00 00 00`** — `0x9a & 0xC0 == 0x80` = INIT_RESPONSE, `& 0x20 == 0` = no error flag. Valid. |
-| `inputreport` shape | `reportId === 0`, `event.data` = 8-byte `DataView`, header byte intact (`0x9a`) — as predicted in §2 |
+| input / output / feature report | id 0, **8 bytes** each (`8x8bit`) |
+| `sendReport(0, …)` | **physically works** — the predicted feature-only blocker did **not** occur |
+| `inputreport` shape | `reportId === 0`, `event.data` = 8-byte `DataView`, header byte intact |
 
-So: **VID/PID, plain-HID enumeration, the FF00/01 collection, report-id-0 8-byte
-in/out/feature, `sendReport` capability, and the full INIT request→response
-round-trip are proven on real hardware.**
+### 0.b INIT round-trip — CONFIRMED
 
-**NOT yet confirmed (next physical test):** `SET_MEASUREMENT_PERIOD` accepted;
-`START_MEASUREMENTS` starts a stream; measurement packet layout / rate / jitter;
-`GET_MEASUREMENT_STATUS` poll + TRIGGERED edge; blue-button detection; the
-micron→metre sign and scale; unplug/replug/refresh reconnect.
+| | |
+|---|---|
+| INIT request (host→device) | `1a 02 00 00 00 00 00 00` — sent, accepted |
+| INIT response (device→host) | **`9a 1a 00 00 00 00 00 00`** — `& 0xC0 == 0x80` = INIT_RESPONSE, `& 0x20 == 0` = no error. Valid. |
 
-### 0.1 Bug found and fixed by this test — `TypeError: Illegal invocation`
+### 0.c Connection lifecycle — CONFIRMED
+
+- **Auto-reconnect of a previously granted device works** in this Chrome
+  environment. Observed on startup:
+  ```
+  sensor status: reconnecting
+  device descriptor captured
+  device opened (reconnect) — Go! Motion ver 1.02
+  sensor status: system_ready
+  auto-reconnect to a previously granted sensor succeeded
+  ```
+  So `navigator.hid.getDevices()` + silent re-open + INIT is a viable startup
+  path — the spec §15.5 "SHOULD" is met here (no RECONNECT click needed on this
+  PC). Still treat it as best-effort in code (other machines/policies may differ).
+
+### 0.d Acquisition + streaming — CONFIRMED
+
+- `SYSTEM_READY → SENSOR_READY` succeeded (`SET_MEASUREMENT_PERIOD 0.040` +
+  `START(button)` accepted).
+- On-screen **START** succeeded:
+  ```
+  sensor status: sensor_ready
+  trigger start (source: immediate)
+  sensor status: measuring
+  ```
+- **Real position samples streamed** at **25.0 Hz, mean interval ≈ 40.0 ms**.
+- A real completed run: **1894 samples, 75.72 s, ~25 Hz nominal, source
+  `sensor`**. The diagnostic view buffer capped at 1000 samples while the frozen
+  `MotionRun` retained all 1894 — bounded presentation, un-truncated authoritative
+  data. Working as designed.
+- Position values were physically plausible and tracked target distance across
+  **≈ 0.16 m → 4.30 m**. `micron × 1e-6 → metres` (Cyclops `ConvertToVoltage` +
+  linear DDS a=0 b=1) is **confirmed sufficient for application development**;
+  formal calibration deferred to Live Lab acceptance.
+
+### 0.e Physical blue button — STOP CONFIRMED, START not yet tested
+
+- Pressing the physical Go!Motion button during `MEASURING` **stopped**
+  acquisition: `trigger stop (source: button)`. So browser-side polling of
+  `GET_MEASUREMENT_STATUS` for the TRIGGERED `1→0` edge works.
+- **Physical-button START (`SENSOR_READY` + press → `MEASURING`) has NOT been
+  separately demonstrated.** Small follow-up hardware check; not a blocker.
+
+### 0.f Still unproven (later acceptance, not Milestone-1 blockers)
+
+Multi-run reliability over many cycles; a deliberate unplug→`DEVICE_LOST`→replug
+cycle; sustained >5-min stability; physical-button START; formal distance
+calibration.
+
+### 0.1 Bug found and fixed by the first test — `TypeError: Illegal invocation`
 
 The first real run reached "device descriptor captured" then failed:
 
@@ -335,13 +382,15 @@ and the status-poll stall as backup.
 1. ✅ Enumerates as VID `0x08F7` / PID `0x0004`, plain HID, no driver, `Go! Motion ver 1.02`.
 2. ✅ `sendReport(0, …)` physically reaches the device (INIT delivered; no feature-report fallback needed).
 3. ✅ `inputreport` delivers an 8-byte payload with `reportId` 0 and the header byte intact.
-9. ✅ INIT request `1a 02 …` → valid INIT response `9a 1a …` (error flag clear).
-   Work-network policy permits WebHID.
+4. ✅ INIT `1a 02 …` → valid INIT response `9a 1a …` (error flag clear). Work-network policy permits WebHID.
+5. ✅ `SET_MEASUREMENT_PERIOD 0.040` + `START(button)` + on-screen `START(immediate)` accepted; real-time distance stream runs at **25.0 Hz, mean interval ≈ 40.0 ms**; a 1894-sample / 75.72 s run completed with no lag growth reported.
+6. ✅ `GET_MEASUREMENT_STATUS` poll detects the TRIGGERED `1→0` edge — physical blue button **stopped** a run (`trigger stop (source: button)`).
+7. ✅ Auto-reconnect of a previously granted device on startup (`getDevices()` → re-open → INIT → `system_ready`) works in this Chrome.
+8. ✅ `micron × 1e-6 → metres` plausible and target-tracking across ≈ 0.16–4.30 m — sufficient for app development.
 
-**Still uncertain — next physical test:**
+**Still to demonstrate (later acceptance, not Milestone-1 blockers):**
 
-4. Real-time streaming actually starts and sustains ~25 Hz with acceptable jitter and no lag growth. (medium)
-5. `SET_MEASUREMENT_PERIOD` and `START/STOP_MEASUREMENTS` are accepted; measurement packet layout. (medium)
-6. `GET_MEASUREMENT_STATUS` round-trips fast enough to see a clean blue-button edge. (medium)
-7. `navigator.hid` `disconnect` fires promptly on unplug; `getDevices()` + re-open works after replug and after refresh. (medium)
-8. Sign/scale of the microns value matches physical distance from the sensor. (medium)
+- Physical-button **START** (`SENSOR_READY` + press → `MEASURING`).
+- A deliberate unplug → `DEVICE_LOST` → replug cycle (`navigator.hid` `disconnect` timing).
+- Many-cycle START/STOP reliability and a sustained >5-min run.
+- Formal distance calibration (Live Lab acceptance).

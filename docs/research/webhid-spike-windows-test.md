@@ -1,8 +1,19 @@
-# Motion World Web — Sensor Test — Windows + CBR 2 procedure
+# Motion World Web — Sensor Test — Windows + Go!Motion procedure
 
-This is the **one unavoidable gate** for Milestone Zero. The software is done
-and green on the Mac; only the real Vernier CBR 2 / Go!Motion on the Windows
-work PC can move any result from **SOFTWARE VERIFIED** to **HARDWARE VERIFIED**.
+> **RESULT (2026-09-07): PASSED — feasibility class A (DIRECT WEBHID VIABLE),
+> HARDWARE VERIFIED.** Windows work PC + Chrome + GitHub Pages HTTPS + Vernier
+> **Go! Motion ver 1.02**. Connect, auto-reconnect, INIT, SENSOR READY, START,
+> a 25 Hz distance stream, a 1894-sample / 75.7 s completed run, and physical
+> blue-button STOP all worked with no native helper / driver / backend / admin.
+> One `TypeError: Illegal invocation` bug was found and fixed (browser timer
+> receiver — commit `a7ce4e8`). Full record: `go-motion-webhid-protocol.md` §0.
+> Not yet demonstrated: physical-button START, a deliberate unplug/replug cycle,
+> many-cycle + >5-min endurance, formal calibration. This procedure is kept for
+> re-testing and for those follow-ups.
+
+This was the **one unavoidable gate** for Milestone Zero — only the real Vernier
+Go!Motion on the Windows work PC could move any result from **SOFTWARE VERIFIED**
+to **HARDWARE VERIFIED**.
 
 Do the test in **Chrome** or **Edge** (whichever the work PC has). Keep this
 page open in a second tab so you can paste the diagnostics back.
