@@ -30,11 +30,33 @@ export interface ChartInput {
    * rather than painting over the axes.
    */
   readonly target?: { readonly t: readonly number[]; readonly x: readonly number[] };
+  /** Wired to a generous invisible hit region along the target path (Walk the
+   *  Line vertical drag). The visible stroke is unchanged. */
+  readonly onTargetPointerDown?: (event: PointerEvent) => void;
+}
+
+/** The last render's Y mapping — for converting a vertical drag to metres. */
+export interface YGeometry {
+  readonly domain: readonly [number, number];
+  readonly pixelTop: number; // smaller SVG y — plot top
+  readonly pixelBottom: number; // larger SVG y — plot bottom
+}
+
+export function metresPerPixelY(g: YGeometry): number {
+  const span = g.pixelBottom - g.pixelTop;
+  if (span === 0) return 0;
+  return (g.domain[1] - g.domain[0]) / span;
+}
+
+export function pixelYToMetres(g: YGeometry, pixelY: number): number {
+  return makeScale([g.pixelBottom, g.pixelTop], g.domain)(pixelY);
 }
 
 export interface ChartHandle {
   update(input: ChartInput): void;
   destroy(): void;
+  /** null before the first render. */
+  yGeometry(): YGeometry | null;
 }
 
 const MARGIN = { top: 16, right: 20, bottom: 40, left: 60 } as const;
@@ -140,6 +162,7 @@ export function mountChart(host: HTMLElement): ChartHandle {
 
   let prevY: [number, number] | undefined;
   let lastInput: ChartInput | null = null;
+  let lastYGeometry: YGeometry | null = null;
 
   const redraw = (): void => {
     if (!lastInput) return;
@@ -162,6 +185,7 @@ export function mountChart(host: HTMLElement): ChartHandle {
 
     const xScale = makeScale(xDomain, [plot.x0, plot.x1]);
     const yScale = makeScale(yDomain, [plot.y0, plot.y1]);
+    lastYGeometry = { domain: yDomain, pixelTop: plot.y1, pixelBottom: plot.y0 };
 
     while (root.firstChild) root.removeChild(root.firstChild);
     const g = svg("g");
@@ -246,7 +270,25 @@ export function mountChart(host: HTMLElement): ChartHandle {
         xScale,
         yScale,
       );
-      if (targetD) gClip.appendChild(svg("path", { class: "target", d: targetD }));
+      if (targetD) {
+        gClip.appendChild(svg("path", { class: "target", d: targetD }));
+        // a generous invisible hit region for vertical drag (visible stroke unchanged)
+        const hit = svg("path", {
+          class: "target-hit",
+          d: targetD,
+          fill: "none",
+          stroke: "transparent",
+          "stroke-width": 26,
+          "pointer-events": "stroke",
+        });
+        (hit as SVGElement & { style: CSSStyleDeclaration }).style.cursor = "ns-resize";
+        if (input.onTargetPointerDown) {
+          hit.addEventListener("pointerdown", (e) =>
+            input.onTargetPointerDown!(e as PointerEvent),
+          );
+        }
+        gClip.appendChild(hit);
+      }
     }
 
     // the (student) trace
@@ -272,6 +314,9 @@ export function mountChart(host: HTMLElement): ChartHandle {
     destroy() {
       window.removeEventListener("resize", onResize);
       root.remove();
+    },
+    yGeometry() {
+      return lastYGeometry;
     },
   };
 }
