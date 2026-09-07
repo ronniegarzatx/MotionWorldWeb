@@ -26,9 +26,15 @@ button — with no native helper, driver, backend, or admin rights. Direct WebHI
 is viable.
 
 **Now:** the Motion World application — a six-tool Home with **Live Lab**,
-**Data Display**, and **Walk the Line** active, on the sensor/acquisition/model
-layer built and hardware-verified in M0. Protocol diagnostics live behind
-`?debug=sensor`.
+**Data Display**, and **Walk the Line** active, a **Runs** utility, on the
+sensor/acquisition/model layer built and hardware-verified in M0. Protocol
+diagnostics live behind `?debug=sensor`.
+
+| | |
+|---|---|
+| **Tools** | Live Lab · Data Display · Walk the Line |
+| **Utility** | Runs (`#/runs`) — saved collections |
+| **Coming next** | Snapshot Lab · Speed Lab · Sequence Lab |
 
 - **Milestone 1** — app shell, Home, Live Lab, Data Display, shared acquisition
   control, web-native dark-first design system.
@@ -41,6 +47,21 @@ layer built and hardware-verified in M0. Protocol diagnostics live behind
   Away → Pause → Toward). The live overlay is intentional. Reuses the Live Lab
   SVG chart (`ui/chart/time-series-chart.ts`) with a `target` curve + plot
   clipping; **fixed** axes from the target (unlike Live Lab's auto-scale).
+- **Milestone 2 — Movable target + Local Runs + AnalysisWindow.**
+  - *Walk the Line:* the target position is **movable** — drag it vertically or
+    use `− 0.5 m` / `+ 0.5 m` / Reset. The same graph *shape* at a different
+    height is still the same kind of motion. The catalog stays immutable
+    (movement is a render-time translation); axes stay fixed; controls lock
+    while collecting.
+  - *Runs:* every completed collection — including partial ones (you left the
+    tool, or the sensor was unplugged) — is **saved on this device** in
+    IndexedDB. **Runs are stored on this device; they can be lost if the browser
+    or site data is cleared.** No account, no backend, no cloud. `#/runs` lists
+    them newest-first; open one to see its graph with no sensor needed. If
+    durable storage isn't available (some `file://` contexts) the app falls back
+    to temporary in-memory storage and says so.
+  - *`AnalysisWindow`* — a pure, immutable interval selection over a run. The
+    foundation Snapshot Lab and Speed Lab will build on. Not a user feature yet.
 
 - Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
 - Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)

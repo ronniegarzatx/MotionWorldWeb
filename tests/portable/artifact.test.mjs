@@ -44,11 +44,17 @@ describe("portable artifact (real build)", () => {
     expect(html).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\./i);
   });
 
-  it("carries the current app: title + Walk the Line + Home/Live/Data", () => {
+  it("carries the current app: title + Walk the Line + Home/Live/Data + Runs", () => {
     expect(html).toMatch(/<title>[^<]*Motion World/i);
     expect(html).toContain("Walk the Line");
     expect(html).toContain("Data Display");
     expect(html).toContain("Live Lab");
+    expect(html).toContain("NO SAVED RUNS YET"); // Runs UI is bundled
+  });
+
+  it("bundles the local-run storage code (IndexedDB is browser-local, allowed)", () => {
+    expect(html).toContain("motion-world"); // the IndexedDB database name
+    expect(html).toMatch(/Temporary storage/); // the MemoryRunStore fallback notice
   });
 
   it("applies the offline CSP", () => {

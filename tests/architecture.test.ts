@@ -53,3 +53,26 @@ describe("sensor-boundary architecture guard", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * The persistence boundary (M2 §B1): IndexedDB lives ONLY in src/store/.
+ * Views/labs depend on the RunStore interface, never the IDB implementation.
+ */
+describe("persistence-boundary architecture guard", () => {
+  it("nothing outside src/store/ mentions IndexedDB", () => {
+    const offenders = files
+      .filter((f) => !f.path.startsWith("store/"))
+      .filter((f) => /\bindexedDB\b|IDBDatabase|IDBObjectStore|IDBFactory/.test(f.text))
+      .map((f) => f.path);
+    expect(offenders).toEqual([]);
+  });
+
+  it("nothing outside src/store/ imports the IndexedDB implementation", () => {
+    const offenders = files
+      .filter((f) => !f.path.startsWith("store/"))
+      .filter((f) => /from ["'][^"']*store\/(indexeddb-run-store|create-run-store)/.test(f.text))
+      .map((f) => f.path);
+    // app/app.ts legitimately imports create-run-store (the fallback factory)
+    expect(offenders.filter((p) => p !== "app/app.ts")).toEqual([]);
+  });
+});
