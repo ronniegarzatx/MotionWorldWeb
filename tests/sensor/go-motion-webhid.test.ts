@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { GoMotionWebHIDAdapter } from "../../src/sensor/go-motion-webhid.js";
 import { toHex } from "../../src/sensor/go-motion-protocol.js";
 import type { MotionSample, SensorStatus, TriggerEvent } from "../../src/sensor/types.js";
@@ -156,5 +156,100 @@ describe("GoMotionWebHIDAdapter", () => {
     await again.adapter.disconnect();
     expect(again.device.opened).toBe(false);
     expect(again.adapter.status).toBe("no_device");
+  });
+});
+
+/**
+ * Regression: real Chromium binds `setTimeout`/`setInterval` to `Window` and
+ * throws `TypeError: Illegal invocation` when they are called with any other
+ * receiver (e.g. as a property of the adapter). Node/jsdom do not enforce this,
+ * which is why every earlier unit test passed while the real Go!Motion init
+ * failed with `protocol_init_failed` right after a valid `9a 1a ...` INIT reply.
+ *
+ * These tests install strict, receiver-checking globals and exercise the
+ * adapter's DEFAULT (non-injected) timer path.
+ */
+describe("GoMotionWebHIDAdapter — browser timer receiver safety", () => {
+  const strictBuilt: GoMotionWebHIDAdapter[] = [];
+  let realSetTimeout: typeof setTimeout;
+  let realClearTimeout: typeof clearTimeout;
+  let realSetInterval: typeof setInterval;
+  let realClearInterval: typeof clearInterval;
+
+  const guard =
+    <A extends unknown[], R>(name: string, real: (...args: A) => R) =>
+    function (this: unknown, ...args: A): R {
+      // Mimic Chromium: the receiver must be the global (or undefined for a
+      // bare call). Any other object -> Illegal invocation.
+      if (this !== undefined && this !== null && this !== globalThis) {
+        throw new TypeError(`Illegal invocation (${name} called with a foreign receiver)`);
+      }
+      return real.apply(globalThis, args);
+    };
+
+  beforeAll(() => {
+    realSetTimeout = globalThis.setTimeout;
+    realClearTimeout = globalThis.clearTimeout;
+    realSetInterval = globalThis.setInterval;
+    realClearInterval = globalThis.clearInterval;
+    globalThis.setTimeout = guard("setTimeout", realSetTimeout) as typeof setTimeout;
+    globalThis.clearTimeout = guard("clearTimeout", realClearTimeout) as typeof clearTimeout;
+    globalThis.setInterval = guard("setInterval", realSetInterval) as typeof setInterval;
+    globalThis.clearInterval = guard("clearInterval", realClearInterval) as typeof clearInterval;
+  });
+
+  afterAll(() => {
+    globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
+    globalThis.setInterval = realSetInterval;
+    globalThis.clearInterval = realClearInterval;
+  });
+
+  afterEach(async () => {
+    for (const a of strictBuilt.splice(0)) await a.disconnect();
+    await new Promise((r) => realSetTimeout(r, 5));
+  });
+
+  function strictBuild() {
+    const hid = new FakeHid();
+    const device = new FakeHidDevice();
+    hid.requestResult = [device];
+    hid.grantedDevices = [device];
+    // NOTE: no setTimeoutFn/setIntervalFn injected -> exercises the default path.
+    const adapter = new GoMotionWebHIDAdapter(hid, {
+      statusPollMs: 5,
+      commandTimeoutMs: 200,
+      now: () => 0,
+    });
+    strictBuilt.push(adapter);
+    return { hid, device, adapter };
+  }
+
+  it("the strict global itself rejects a foreign receiver (test scaffold sanity)", () => {
+    const foreign = { setTimeout: globalThis.setTimeout };
+    expect(() => foreign.setTimeout(() => {}, 0)).toThrow(/Illegal invocation/);
+  });
+
+  it("connect(): INIT waiter installs, packet is sent, 9a 1a reply resolves -> system_ready", async () => {
+    const { adapter, device } = strictBuild();
+    await adapter.connect();
+    await new Promise((r) => realSetTimeout(r, 0));
+
+    expect(toHex(device.sentReports[0]!)).toBe("1a 02 00 00 00 00 00 00");
+    // the FakeHidDevice auto-answers 9a 1a 00 ... to INIT
+    expect(adapter.status).toBe("system_ready");
+    expect(adapter.lastError).toBeNull();
+  });
+
+  it("setReady(true): SET_PERIOD + START(button) round-trip under strict timers -> sensor_ready", async () => {
+    const { adapter, device } = strictBuild();
+    await adapter.connect();
+    await new Promise((r) => realSetTimeout(r, 0));
+    device.sentReports.length = 0;
+    await adapter.setReady(true);
+    await new Promise((r) => realSetTimeout(r, 0));
+    expect(toHex(device.sentReports[0]!)).toBe("1b 28 00 00 00 00 00 00");
+    expect(toHex(device.sentReports[1]!)).toBe("18 01 00 00 00 00 00 00");
+    expect(adapter.status).toBe("sensor_ready");
   });
 });

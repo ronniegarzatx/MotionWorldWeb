@@ -1,9 +1,11 @@
 # Go!Motion / CBR 2 — WebHID protocol research
 
-**Status:** SOURCE-INSPECTION ONLY. Nothing here is confirmed on real hardware
-over WebHID. Every fact is tagged with a confidence level and its evidence.
-The Milestone Zero spike exists to turn the `medium` / `low` items into
-`hardware-confirmed`.
+**Status:** MOSTLY SOURCE-INSPECTION. **Section 0 records the first real
+Windows + Go!Motion result (2026-09-07)** — device identity, the HID collection,
+and the INIT request/response round-trip are now **hardware-confirmed**.
+Measurement streaming, period/START/STOP, the blue button, and the sample scale
+are still unproven and are the next physical test. Every other fact is tagged
+with a confidence level and its evidence.
 
 **Primary evidence:** the Vernier GoIO SDK C++ source at
 `/Users/sine/Desktop/GoIO_SDK/src` (read-only; not modified). File+line
@@ -18,24 +20,78 @@ base protocol (`GSkipComm.h` / `GSkipCommExt.h`); Cyclops adds a few extensions
 
 ---
 
+## 0. HARDWARE-CONFIRMED — first Windows + Go!Motion test (2026-09-07)
+
+Chrome on the user's Windows work PC, device picker + `GoMotionWebHIDAdapter`.
+
+**Confirmed facts:**
+
+| Fact | Value |
+|---|---|
+| `productName` | **`Go! Motion ver 1.02`** (note the space in "Go! Motion") |
+| `vendorId` | **`0x08F7`** (2295) |
+| `productId` | **`0x0004`** (4) |
+| Windows driver | **none** — enumerated as plain HID, `opened: true`, no install, no admin |
+| HID collections | **1**, `usagePage 0xFF00`, `usage 0x01` (vendor-defined) |
+| report id | **`0`** for all three report types |
+| input report | id 0, **8 bytes** (`8x8bit`) |
+| output report | id 0, **8 bytes** — **`sendReport(0, …)` physically works** (the predicted feature-only blocker did **not** occur) |
+| feature report | id 0, 8 bytes (present, unused by us) |
+| INIT request (host→device) | `1a 02 00 00 00 00 00 00` — sent and accepted |
+| INIT response (device→host) | **`9a 1a 00 00 00 00 00 00`** — `0x9a & 0xC0 == 0x80` = INIT_RESPONSE, `& 0x20 == 0` = no error flag. Valid. |
+| `inputreport` shape | `reportId === 0`, `event.data` = 8-byte `DataView`, header byte intact (`0x9a`) — as predicted in §2 |
+
+So: **VID/PID, plain-HID enumeration, the FF00/01 collection, report-id-0 8-byte
+in/out/feature, `sendReport` capability, and the full INIT request→response
+round-trip are proven on real hardware.**
+
+**NOT yet confirmed (next physical test):** `SET_MEASUREMENT_PERIOD` accepted;
+`START_MEASUREMENTS` starts a stream; measurement packet layout / rate / jitter;
+`GET_MEASUREMENT_STATUS` poll + TRIGGERED edge; blue-button detection; the
+micron→metre sign and scale; unplug/replug/refresh reconnect.
+
+### 0.1 Bug found and fixed by this test — `TypeError: Illegal invocation`
+
+The first real run reached "device descriptor captured" then failed:
+
+```
+unhandled error: TypeError: Illegal invocation
+error [protocol_init_failed] INIT failed: TypeError: Illegal invocation
+```
+
+**This was a browser-plumbing bug, not a protocol failure** — the device *did*
+receive INIT and reply with a valid `9a 1a …`. Root cause: `GoMotionWebHIDAdapter`
+stored `window.setTimeout` / `setInterval` / `clearTimeout` / `clearInterval` as
+instance fields and later invoked them as `this.setTimeoutFn(…)`. Chromium binds
+these WebIDL methods to `Window`; calling one with the adapter as receiver throws
+`TypeError: Illegal invocation`. It was thrown *inside* the response-promise
+executor, so the pending-command waiter was never installed, the valid INIT
+reply had nothing to resolve, and the pre-rejected promise surfaced as
+`protocol_init_failed`. Node / jsdom don't enforce the receiver, so every unit
+test passed. Fixed by binding the platform timer globals to `globalThis`
+(`this.setTimeoutFn = globalThis.setTimeout.bind(globalThis)` etc.); injected
+test timers still work. Regression test:
+`tests/sensor/go-motion-webhid.test.ts` → "browser timer receiver safety".
+
+---
+
 ## 1. Device identity (VID / PID / product string)
 
 | Fact | Value | Dir | Evidence | Confidence | M0 uses |
 |---|---|---|---|---|---|
-| USB vendor ID (Vernier) | `0x08F7` | — | `GVernierUSB.h:33` `VERNIER_DEFAULT_VENDOR_ID = 0x08F7` | high | yes — HID filter |
-| USB product ID (Cyclops = Go!Motion) | `0x0004` | — | `GVernierUSB.h:38` `CYCLOPS_DEFAULT_PRODUCT_ID = 0x0004 //aka GoMotion` | high (Go!Motion) / **medium (CBR 2 specifically)** | yes — HID filter |
-| `productName` string | unknown ("Go!Motion" expected; CBR 2 may differ) | dev→host | not in SDK — HID descriptor field, read at runtime | low | display only |
+| USB vendor ID (Vernier) | `0x08F7` | — | `GVernierUSB.h:33` + **hardware (§0)** | **hardware-confirmed** | yes — HID filter |
+| USB product ID (Go!Motion) | `0x0004` | — | `GVernierUSB.h:38` + **hardware (§0)** | **hardware-confirmed** | yes — HID filter |
+| `productName` string | **`Go! Motion ver 1.02`** | dev→host | **hardware (§0)** | **hardware-confirmed** | display only |
 | Other Vernier PIDs (to *exclude*) | LabPro `0x0001`, GoTemp `0x0002`, GoLink `0x0003`, LabQuest `0x0005`, SpectroVis `0x0006`, MiniGC `0x0007` | — | `GVernierUSB.h:35-43` | high | filter narrowness |
 
-**Open question resolved by the spike:** does the **CBR 2** (a later revision of
-Go!Motion) enumerate with PID `0x0004` and Vernier VID `0x08F7`, or its own
-PID? The spike's DEVELOPMENT broad-chooser path (Section 8 of the plan) is there
-to answer this if the narrow filter shows nothing.
+**Resolved:** the unit tested was labelled a **Go!Motion** ("Go! Motion ver
+1.02"), not literally a "CBR 2", and it enumerates exactly as the SDK predicts —
+VID `0x08F7`, PID `0x0004`. The narrow filter `{vendorId:0x08F7,
+productId:0x0004}` is correct; `?broad` was not needed.
 
-**Windows driver:** GoIO talks to the device as a **plain HID** device via
-`HidD_*` / `ReadFile` / `WriteFile` (`Win32/GSkipBaseDevice_Win.cpp`). No custom
-kernel driver. Expectation: it enumerates as a standard HID device with no
-install. **Confidence: medium** — confirm on the work PC.
+**Windows driver:** **confirmed none** — it enumerated as plain HID
+(`opened: true`), no install, no admin (§0). Matches the SDK's `HidD_*` path
+(`Win32/GSkipBaseDevice_Win.cpp`).
 
 ---
 
@@ -49,18 +105,17 @@ install. **Confidence: medium** — confirm on the work PC.
   (unnumbered reports), `buf[1..8]` = the 8-byte application packet.
   `BYTES_IN_MICROSOFT_HID_PACKET 9`, `FIRST_PAYLOAD_BYTE_INDEX_… 1`
   (`GSkipBaseDevice_Win.cpp:45-46`).
-  - **WebHID mapping:** `device.sendReport(0, Uint8Array(8))` for output;
-    `inputreport` events arrive with `event.reportId === 0` and
-    `event.data` = `DataView` of **8 bytes** (the browser strips the report-ID
-    byte). Confidence: medium — WebHID may surface a different `reportId` or
-    require a real numbered report; **spike must dump the report descriptor.**
+  - **WebHID mapping — hardware-confirmed (§0):** `device.sendReport(0,
+    Uint8Array(8))` physically works; `inputreport` events arrive with
+    `event.reportId === 0` and `event.data` = `DataView` of **8 bytes** with the
+    header byte intact (`0x9a` observed). Collection: 1 × `usagePage 0xFF00`
+    `usage 0x01`, report id 0, 8-byte input/output/feature.
 - **Output / command stream:** historically issued as `Set_Report` on control
   endpoint 0 (`GSkipComm.h:39-41`); on Windows just `WriteFile` of an output
-  report (`GSkipBaseDevice_Win.cpp:750`). WebHID `sendReport()` covers both.
-  **Risk:** WebHID refuses `sendReport` if the report descriptor declares no
-  output report (only a feature report). If so, try
-  `sendFeatureReport()`. This is the single most likely blocker — call it out
-  in the spike log explicitly.
+  report (`GSkipBaseDevice_Win.cpp:750`). **The predicted "no output report →
+  sendReport refused" blocker did NOT occur** — the descriptor declares an
+  8-byte output report at id 0 and `sendReport(0, …)` delivered INIT
+  successfully.
 - **Input streams (two, multiplexed on one interrupt IN endpoint):** every
   inbound 8-byte packet's **first byte is a header**; bits `0xC0` select the
   stream (`GSkipComm.h:49-60`):
@@ -275,13 +330,18 @@ and the status-poll stall as backup.
 - `(b0 & 0xC0) == 0x80` → INIT response (`b0 & 0x20` = error).
 - `(b0 & 0xC0) == 0xC0` → idle/notification, ignore.
 
-**Uncertain until hardware (spike targets):**
+**Hardware-confirmed (2026-09-07 — see §0):**
 
-1. CBR 2 actually enumerates as VID `0x08F7` / PID `0x0004`, plain HID, no driver. (medium)
-2. WebHID `sendReport(0, …)` reaches the device (vs. needing a feature report / being blocked). (medium — highest risk)
-3. `inputreport` delivers 8-byte payloads with `reportId` 0 and the header byte intact. (medium)
+1. ✅ Enumerates as VID `0x08F7` / PID `0x0004`, plain HID, no driver, `Go! Motion ver 1.02`.
+2. ✅ `sendReport(0, …)` physically reaches the device (INIT delivered; no feature-report fallback needed).
+3. ✅ `inputreport` delivers an 8-byte payload with `reportId` 0 and the header byte intact.
+9. ✅ INIT request `1a 02 …` → valid INIT response `9a 1a …` (error flag clear).
+   Work-network policy permits WebHID.
+
+**Still uncertain — next physical test:**
+
 4. Real-time streaming actually starts and sustains ~25 Hz with acceptable jitter and no lag growth. (medium)
-5. `GET_MEASUREMENT_STATUS` round-trips fast enough to see a clean blue-button edge. (medium)
-6. `navigator.hid` `disconnect` fires promptly on unplug; `getDevices()` + re-open works after replug and after refresh. (medium)
-7. Sign/scale of the microns value matches physical distance from the sensor. (medium)
-8. School/work browser policy permits WebHID at all. (unknown — environmental)
+5. `SET_MEASUREMENT_PERIOD` and `START/STOP_MEASUREMENTS` are accepted; measurement packet layout. (medium)
+6. `GET_MEASUREMENT_STATUS` round-trips fast enough to see a clean blue-button edge. (medium)
+7. `navigator.hid` `disconnect` fires promptly on unplug; `getDevices()` + re-open works after replug and after refresh. (medium)
+8. Sign/scale of the microns value matches physical distance from the sensor. (medium)

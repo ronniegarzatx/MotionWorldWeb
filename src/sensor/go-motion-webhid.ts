@@ -127,10 +127,15 @@ export class GoMotionWebHIDAdapter implements SensorAdapter {
     this.commandTimeoutMs = opts.commandTimeoutMs ?? 1500;
     this.lostAfterFailedPolls = opts.lostAfterFailedPolls ?? 10;
     this.now = opts.now ?? (() => (typeof performance !== "undefined" ? performance.now() : Date.now()));
-    this.setTimeoutFn = opts.setTimeoutFn ?? setTimeout;
-    this.clearTimeoutFn = opts.clearTimeoutFn ?? clearTimeout;
-    this.setIntervalFn = opts.setIntervalFn ?? setInterval;
-    this.clearIntervalFn = opts.clearIntervalFn ?? clearInterval;
+    // Browser-native timer functions are WebIDL methods bound to Window: calling
+    // them with any other receiver (e.g. as `this.setTimeoutFn(...)` where `this`
+    // is the adapter) throws `TypeError: Illegal invocation` in real Chromium.
+    // Bind the platform globals to `globalThis` so the receiver is always the
+    // global. Node/jsdom don't enforce this, which is why unit tests missed it.
+    this.setTimeoutFn = opts.setTimeoutFn ?? globalThis.setTimeout.bind(globalThis);
+    this.clearTimeoutFn = opts.clearTimeoutFn ?? globalThis.clearTimeout.bind(globalThis);
+    this.setIntervalFn = opts.setIntervalFn ?? globalThis.setInterval.bind(globalThis);
+    this.clearIntervalFn = opts.clearIntervalFn ?? globalThis.clearInterval.bind(globalThis);
     this.log = opts.onLog ?? (() => {});
     this.onDeviceReport = opts.onDeviceReport ?? (() => {});
 
