@@ -92,6 +92,28 @@ const xTicks = (host: HTMLElement): number[] =>
     .map((t) => Number(t.textContent))
     .filter((n) => Number.isFinite(n));
 
+const byAria = (host: HTMLElement, label: string): HTMLButtonElement | null =>
+  host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+const limitBtn = (host: HTMLElement, mph: number): HTMLButtonElement =>
+  byAria(host, `${mph} mph limit`)!;
+const calcBtn = (host: HTMLElement): HTMLButtonElement =>
+  byAria(host, "How was this speed calculated?")!;
+const zoomBtn = (host: HTMLElement): HTMLButtonElement | null =>
+  host.querySelector<HTMLButtonElement>(".speed-deck__zoom");
+const intervalToggle = (host: HTMLElement): HTMLButtonElement =>
+  host.querySelector<HTMLButtonElement>(".speed-deck__interval-toggle")!;
+
+/** open the editor and trim the End inward by `steps` × 0.2 s (each click re-renders) */
+const trimEnd = (host: HTMLElement, steps = 3): void => {
+  if (intervalToggle(host).getAttribute("aria-expanded") !== "true") intervalToggle(host).click();
+  for (let i = 0; i < steps; i++) {
+    const end = [...host.querySelectorAll(".snapshot-step")].find((s) =>
+      s.textContent?.startsWith("End"),
+    )!;
+    end.querySelector("button")!.click(); // the "−"
+  }
+};
+
 describe("speed-lab-view — a run", () => {
   it("main screen shows only YOUR SPEED, the mph value and the direction", async () => {
     const { host } = await withRun(linearWalk("cur"));
@@ -109,25 +131,68 @@ describe("speed-lab-view — a run", () => {
     expect(host.textContent).not.toMatch(/NaN|Infinity/);
   });
 
-  it("puts the speed result above the graph, then interval controls, then the bottom row", async () => {
+  it("all controls sit in one deck above the graph — nothing below it", async () => {
     const { host } = await withRun(linearWalk("cur"));
-    const result = host.querySelector(".speed-result")!;
+    const lab = host.querySelector(".speed-lab")!;
+    const deck = host.querySelector(".speed-deck")!;
     const chart = host.querySelector(".chart-host")!;
-    const controls = host.querySelector(".speed-controls")!;
-    const limits = host.querySelector(".speed-limits")!;
-    const calc = btn(host, "How was this speed calculated?");
-    expect(follows(result, chart)).toBe(true);
-    expect(follows(chart, controls)).toBe(true);
-    expect(follows(controls, limits)).toBe(true);
-    // speed-limit presets and the calculation button share the bottom row
-    expect(host.querySelector(".speed-lab__bottom")!.contains(limits)).toBe(true);
-    expect(host.querySelector(".speed-lab__bottom")!.contains(calc)).toBe(true);
+    expect(follows(deck, chart)).toBe(true);
+    // the graph is the LAST child of the lab — no toolbar band beneath it
+    expect(lab.children[lab.children.length - 1]).toBe(chart);
+    // the old below-graph chrome is gone
+    expect(host.querySelector(".speed-controls")).toBeNull();
+    expect(host.querySelector(".speed-limits")).toBeNull();
+    expect(host.querySelector(".speed-lab__bottom")).toBeNull();
+    // every deck control is inside the deck
+    expect(deck.contains(limitBtn(host, 5))).toBe(true);
+    expect(deck.contains(calcBtn(host))).toBe(true);
+    expect(deck.contains(intervalToggle(host))).toBe(true);
   });
 
-  it("keeps the speed-limit presets and the calculation button visible on the main screen", async () => {
+  it("has a compact segmented speed-limit control (2 | 5 | 10), keyboard-accessible", async () => {
     const { host } = await withRun(linearWalk("cur"));
-    for (const mph of [2, 5, 10]) expect(btn(host, `${mph} mph`)).toBeTruthy();
-    expect(btn(host, "How was this speed calculated?")).toBeTruthy();
+    const seg = host.querySelector(".speed-deck__seg")!;
+    const btns = [...seg.querySelectorAll("button")];
+    expect(btns.map((b) => b.textContent)).toEqual(["2", "5", "10"]);
+    for (const b of btns) {
+      expect(b.getAttribute("aria-pressed")).toMatch(/true|false/);
+      expect(b.getAttribute("aria-label")).toMatch(/mph limit/);
+    }
+    expect(limitBtn(host, 5).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("the interval readout is collapsed by default; Start/End steppers are hidden", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    expect(host.querySelector(".speed-deck__interval-value")!.textContent).toMatch(
+      /\d+\.\d{2}–\d+\.\d{2} s/,
+    );
+    expect(intervalToggle(host).getAttribute("aria-expanded")).toBe("false");
+    expect(host.querySelectorAll(".snapshot-step")).toHaveLength(0);
+  });
+
+  it("clicking the interval readout reveals the Start/End editor", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    intervalToggle(host).click();
+    expect(intervalToggle(host).getAttribute("aria-expanded")).toBe("true");
+    const steppers = [...host.querySelectorAll(".snapshot-step")].map((s) => s.textContent);
+    expect(steppers.some((t) => t?.startsWith("Start"))).toBe(true);
+    expect(steppers.some((t) => t?.startsWith("End"))).toBe(true);
+    // collapses again on a second click
+    intervalToggle(host).click();
+    expect(host.querySelectorAll(".snapshot-step")).toHaveLength(0);
+  });
+
+  it("graph drag handles keep working whether or not the editor is open", async () => {
+    const { host } = await withRun(kinkedWalk("cur"));
+    intervalToggle(host).click(); // editor open
+    const before = host.querySelector(".speed-result__value")!.textContent;
+    const ch = host.querySelector(".chart-host") as HTMLElement;
+    const hit = host.querySelector(".sel-handle-hit-end") as SVGElement;
+    hit.dispatchEvent(pointer("pointerdown", { pointerId: 1, clientX: 700 }));
+    ch.dispatchEvent(pointer("pointermove", { pointerId: 1, clientX: 430 }));
+    ch.dispatchEvent(pointer("pointerup", { pointerId: 1, clientX: 430 }));
+    await flush();
+    expect(host.querySelector(".speed-result__value")!.textContent).not.toBe(before);
   });
 
   it("draws one best-fit line, confined to the selection band", async () => {
@@ -143,32 +208,23 @@ describe("speed-lab-view — a run", () => {
     expect(Math.max(...xs)).toBeLessThanOrEqual(bx + bw + 1);
   });
 
-  it("speed-limit presets: 5 selected by default; picking 2 mph moves the selection", async () => {
+  it("speed-limit segment: 5 selected by default; picking 2 moves the selection", async () => {
     const { host } = await withRun(linearWalk("cur")); // ~1.12 mph
-    expect(btn(host, "5 mph").getAttribute("aria-pressed")).toBe("true");
-    btn(host, "2 mph").click();
-    expect(btn(host, "2 mph").getAttribute("aria-pressed")).toBe("true");
-    expect(btn(host, "5 mph").getAttribute("aria-pressed")).toBe("false");
+    expect(limitBtn(host, 5).getAttribute("aria-pressed")).toBe("true");
+    limitBtn(host, 2).click();
+    expect(limitBtn(host, 2).getAttribute("aria-pressed")).toBe("true");
+    expect(limitBtn(host, 5).getAttribute("aria-pressed")).toBe("false");
     // the chosen limit surfaces in the calculation modal
-    btn(host, "How was this speed calculated?").click();
+    calcBtn(host).click();
     expect(host.textContent).toMatch(/2 mph limit/);
   });
 
-  it("editing the selection recomputes the headline speed", async () => {
-    const { host } = await withRun(kinkedWalk("cur"));
-    const before = host.querySelector(".speed-result__value")!.textContent;
-    const ch = host.querySelector(".chart-host") as HTMLElement;
-    const hit = host.querySelector(".sel-handle-hit-end") as SVGElement;
-    hit.dispatchEvent(pointer("pointerdown", { pointerId: 1, clientX: 700 }));
-    ch.dispatchEvent(pointer("pointermove", { pointerId: 1, clientX: 420 }));
-    ch.dispatchEvent(pointer("pointerup", { pointerId: 1, clientX: 420 }));
-    await flush();
-    expect(host.querySelector(".speed-result__value")!.textContent).not.toBe(before);
-  });
-
-  it("opens the calculation overlay with all the moved supporting detail, then closes", async () => {
+  it("the Δ button has an accessible calculation label and opens the existing modal", async () => {
     const { host } = await withRun(linearWalk("cur"));
-    btn(host, "How was this speed calculated?").click();
+    const calc = calcBtn(host);
+    expect(calc.textContent).toBe("Δ");
+    expect(calc.getAttribute("aria-label")).toBe("How was this speed calculated?");
+    calc.click();
     const modal = host.querySelector(".show-large")!;
     expect(modal).not.toBeNull();
     expect(modal.textContent).toMatch(/best[- ]fit/i); // OLS explanation
@@ -176,8 +232,6 @@ describe("speed-lab-view — a run", () => {
     expect(modal.textContent).toMatch(/\bsamples\b/); // sample count
     expect(modal.textContent).toMatch(/m\/s/); // signed velocity
     expect(modal.textContent).toMatch(/mph limit/); // speed-limit comparison
-    expect(modal.querySelector(".speed-explain__hero")).not.toBeNull();
-    // slope formula (hero) comes before the OLS explanation
     const hero = modal.querySelector(".speed-explain__hero")!;
     const ols = modal.querySelector(".speed-explain__ols")!;
     expect(follows(hero, ols)).toBe(true);
@@ -185,75 +239,78 @@ describe("speed-lab-view — a run", () => {
     expect(host.querySelector(".show-large")).toBeNull();
   });
 
-  it("the calculation modal handles a too-short interval (endpoint slope omitted)", async () => {
-    // a run where the full window works but a pinched interval can't do two points
+  // ── contextual Use All / Zoom ──────────────────────────────────────────
+  it("Use All and Zoom are hidden while the window is the whole run", async () => {
     const { host } = await withRun(linearWalk("cur"));
-    btn(host, "How was this speed calculated?").click();
-    // baseline: two-point section present for the full window
-    expect(host.querySelector(".speed-explain__twopoint")).not.toBeNull();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(zoomBtn(host)).toBeNull();
+    intervalToggle(host).click(); // open the editor
+    expect([...host.querySelectorAll("button")].some((b) => b.textContent === "Use all")).toBe(false);
   });
 
-  // ── window zoom ────────────────────────────────────────────────────────
-  it("Zoom to window / Full run toggles the graph x viewport, not the window", async () => {
-    const { host } = await withRun(linearWalk("cur")); // window [0,4], full x-domain [0,10]
+  it("Use All appears once the window is trimmed, and restores the full run", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    trimEnd(host, 3); // window -> [0, 3.4]
+    const useAll = [...host.querySelectorAll("button")].find((b) => b.textContent === "Use all")!;
+    expect(useAll).toBeTruthy();
+    useAll.click();
+    expect(host.querySelector(".speed-deck__interval-value")!.textContent).toMatch(/0\.00–4\.00 s/);
+    // Use All / Zoom recede again
+    expect(zoomBtn(host)).toBeNull();
+  });
+
+  it("Zoom appears when trimmed; toggles to Full run; changes only the viewport", async () => {
+    const { host } = await withRun(linearWalk("cur"));
     const fullMax = Math.max(...xTicks(host));
-    expect(fullMax).toBeGreaterThan(4);
+    trimEnd(host, 3); // window [0, 3.4], viewport still full
+    const zoom = zoomBtn(host)!;
+    expect(zoom.textContent).toBe("Zoom");
 
-    btn(host, "Zoom to window").click();
-    expect(btn(host, "Full run")).toBeTruthy();
+    zoom.click();
+    expect(zoomBtn(host)!.textContent).toBe("Full run");
     const zoomTicks = xTicks(host);
-    expect(Math.max(...zoomTicks)).toBeLessThanOrEqual(4.001); // viewport == window
-    expect(Math.min(...zoomTicks)).toBeGreaterThanOrEqual(-0.001);
+    expect(Math.max(...zoomTicks)).toBeLessThanOrEqual(3.45); // viewport == window end
+    // the window readout is unchanged by zooming
+    expect(host.querySelector(".speed-deck__interval-value")!.textContent).toMatch(/0\.00–3\.40 s/);
 
-    btn(host, "Full run").click();
-    expect(btn(host, "Zoom to window")).toBeTruthy();
-    expect(Math.max(...xTicks(host))).toBe(fullMax); // viewport restored
+    zoomBtn(host)!.click(); // Full run
+    expect(zoomBtn(host)!.textContent).toBe("Zoom");
+    expect(Math.max(...xTicks(host))).toBe(fullMax);
   });
 
-  it("the OLS result and the selected window are identical across a zoom toggle", async () => {
+  it("the OLS result is identical before zoom, while zoomed, and after Full run", async () => {
     const { host } = await withRun(kinkedWalk("cur"));
+    trimEnd(host, 4); // trim so Zoom is available; window [0, 3.2]
     const snap = () => ({
       value: host.querySelector(".speed-result__value")!.textContent,
       dir: host.querySelector(".speed-result__direction")!.textContent,
-      sel: host.querySelector(".snapshot-selected")!.textContent, // Start stepper readout
+      readout: host.querySelector(".speed-deck__interval-value")!.textContent,
     });
     const before = snap();
-    btn(host, "Zoom to window").click();
+    zoomBtn(host)!.click();
     expect(snap()).toEqual(before);
     expect(host.querySelector(".model-curve")).not.toBeNull(); // OLS line still drawn
-    btn(host, "Full run").click();
+    zoomBtn(host)!.click();
     expect(snap()).toEqual(before);
   });
 
   it("editing the window while zoomed moves the viewport with it", async () => {
     const { host } = await withRun(linearWalk("cur"));
-    btn(host, "Zoom to window").click();
-    const beforeMax = Math.max(...xTicks(host)); // ~4
-    // shrink the End by one −0.2 s step
-    const endMinus = [...host.querySelectorAll(".snapshot-step")]
-      .find((s) => s.textContent?.startsWith("End"))!
-      .querySelector("button")!; // the "−"
-    endMinus.click();
-    expect(btn(host, "Full run")).toBeTruthy(); // still zoomed
+    trimEnd(host, 3); // [0, 3.4]
+    zoomBtn(host)!.click(); // -> zoomed
+    const beforeMax = Math.max(...xTicks(host));
+    trimEnd(host, 4); // [0, ~2.6] — editor is still open
+    expect(zoomBtn(host)!.textContent).toBe("Full run"); // still zoomed
     expect(Math.max(...xTicks(host))).toBeLessThan(beforeMax); // viewport followed
   });
 
   it("Use all while zoomed returns the viewport to the full run", async () => {
     const { host } = await withRun(linearWalk("cur"));
-    btn(host, "Zoom to window").click();
-    btn(host, "Use all").click();
-    expect(btn(host, "Zoom to window")).toBeTruthy(); // no longer zoomed
+    trimEnd(host, 3);
+    zoomBtn(host)!.click(); // zoom
+    expect(zoomBtn(host)!.textContent).toBe("Full run");
+    [...host.querySelectorAll("button")].find((b) => b.textContent === "Use all")!.click();
+    expect(zoomBtn(host)).toBeNull(); // window is full again -> nothing to zoom
     expect(Math.max(...xTicks(host))).toBeGreaterThan(4);
-  });
-
-  it("numeric Start/End controls and the OLS line stay available while zoomed", async () => {
-    const { host } = await withRun(linearWalk("cur"));
-    btn(host, "Zoom to window").click();
-    const steppers = [...host.querySelectorAll(".snapshot-step")].map((s) => s.textContent);
-    expect(steppers.some((t) => t?.startsWith("Start"))).toBe(true);
-    expect(steppers.some((t) => t?.startsWith("End"))).toBe(true);
-    expect(host.querySelector(".model-curve")).not.toBeNull();
   });
 
   it("a new completed run resets the viewport to full run", async () => {
@@ -270,12 +327,13 @@ describe("speed-lab-view — a run", () => {
     });
     mountSpeedLabView(host, { controller, runStore: new MemoryRunStore(), navigate: vi.fn() });
     await flush();
-    btn(host, "Zoom to window").click();
-    expect(btn(host, "Full run")).toBeTruthy();
+    trimEnd(host, 3);
+    zoomBtn(host)!.click();
+    expect(zoomBtn(host)!.textContent).toBe("Full run");
 
     runCompleteCb!(linearWalk("second"));
     await flush();
-    expect(btn(host, "Zoom to window")).toBeTruthy(); // fresh run -> full viewport
+    expect(zoomBtn(host)).toBeNull(); // fresh run -> full window, full viewport
   });
 
   it("zoom works for a saved run with no sensor, without writing back", async () => {
@@ -289,8 +347,9 @@ describe("speed-lab-view — a run", () => {
     const saveSpy = vi.spyOn(runStore, "save");
     mountSpeedLabView(host, { controller, runStore, navigate: vi.fn(), runId: "saved-z" });
     await flush();
-    btn(host, "Zoom to window").click();
-    expect(btn(host, "Full run")).toBeTruthy();
+    trimEnd(host, 3);
+    zoomBtn(host)!.click();
+    expect(zoomBtn(host)!.textContent).toBe("Full run");
     expect(host.querySelector(".model-curve")).not.toBeNull();
     expect(saveSpy).not.toHaveBeenCalled();
   });

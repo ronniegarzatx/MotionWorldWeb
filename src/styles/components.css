@@ -643,22 +643,22 @@
 }
 
 /*
- * Speed Lab — spare projector layout:
- *   top row  (intro on the left, YOUR SPEED result on the right)
+ * Speed Lab — minimal control deck:
+ *   head row  (title/subtitle left, YOUR SPEED result right)
+ *   compact control deck  (limit · interval · zoom · Δ)
  *   large dominant graph
- *   interval controls
- *   bottom row  (speed-limit presets + the calculation button)
+ * Nothing sits below the graph.
  */
 .speed-lab {
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  gap: var(--s-4);
+  grid-template-rows: auto auto 1fr;
+  gap: var(--s-3);
   flex: 1;
   min-height: 0;
 }
 .speed-lab .chart-host {
   min-height: 340px;
-  height: 62vh;
+  height: 64vh;
   background: var(--surface-inset);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -672,7 +672,7 @@
   font-size: var(--type-h2);
 }
 
-.speed-lab__top {
+.speed-lab__head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -685,35 +685,121 @@
   gap: var(--s-1);
 }
 
-.speed-controls {
+/* ── the control deck — quiet by default ─────────────────────────────────── */
+.speed-deck {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
   align-items: center;
+  gap: var(--s-2);
+  min-height: 34px;
 }
-.speed-controls__zoom {
-  margin-left: auto;
+.speed-deck__seg-label,
+.speed-deck__interval-label {
+  font-size: var(--type-label);
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
 }
-.speed-controls__zoom[aria-pressed="true"] {
+
+/* recede: transparent fill, muted text, restrained border */
+.speed-deck__seg .speed-seg__btn,
+.speed-deck__interval-toggle,
+.speed-deck__zoom,
+.speed-deck__calc {
+  min-height: 32px;
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--type-label);
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.speed-deck__seg .speed-seg__btn:hover,
+.speed-deck__interval-toggle:hover,
+.speed-deck__zoom:hover,
+.speed-deck__calc:hover,
+.speed-deck__seg .speed-seg__btn:focus-visible,
+.speed-deck__interval-toggle:focus-visible,
+.speed-deck__zoom:focus-visible,
+.speed-deck__calc:focus-visible {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+/* segmented speed-limit control */
+.speed-deck__seg {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.speed-deck__seg .speed-seg__btn {
+  min-width: 2.5em;
+  border-radius: 0;
+  border-left-width: 0;
+}
+.speed-deck__seg .speed-seg__btn:first-of-type {
+  border-left-width: 1px;
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+}
+.speed-deck__seg .speed-seg__btn:last-of-type {
+  border-top-right-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+.speed-deck__seg .speed-seg__btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* interval readout + folded editor */
+.speed-deck__interval {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+}
+.speed-deck__interval-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.speed-deck__interval-value {
+  color: var(--ink);
+}
+.speed-deck__chev {
+  color: var(--ink-faint);
+}
+.speed-deck__editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+/* viewport toggle — accent only in window mode */
+.speed-deck__zoom[aria-pressed="true"] {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* the compact Δ trigger sits at the right end of the deck */
+.speed-deck__calc {
+  font-size: var(--type-body);
+  min-width: 2.6em;
+  margin-left: auto;
+}
 @media (max-width: 720px) {
-  .speed-controls__zoom {
+  .speed-deck__calc {
     margin-left: 0;
   }
-}
-
-.speed-lab__bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-4);
-  flex-wrap: wrap;
-}
-.speed-lab__explain .btn {
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 /* the result block reserves a stable width so a changing value never reflows */
@@ -747,29 +833,14 @@
   font-size: var(--type-h2);
   text-align: right;
 }
-.speed-limits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  align-items: center;
-}
-.speed-limits__label {
-  font-size: var(--type-label);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-}
 
 @media (max-width: 720px) {
-  .speed-lab__top {
+  .speed-lab__head {
     flex-direction: column;
   }
   .speed-result {
     align-items: flex-start;
     text-align: left;
-  }
-  .speed-lab__bottom {
-    justify-content: flex-start;
   }
 }
 .speed-empty {

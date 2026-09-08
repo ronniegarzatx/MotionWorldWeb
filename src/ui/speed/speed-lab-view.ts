@@ -3,7 +3,7 @@ import type { Route } from "../../app/router.js";
 import type { RunStore } from "../../store/run-store.js";
 import { deserializeRun } from "../../model/stored-run.js";
 import type { MotionRun } from "../../model/motion-run.js";
-import { activeSamples, windowDurationSeconds } from "../../model/analysis-window.js";
+import { activeSamples, fullWindow, windowDurationSeconds } from "../../model/analysis-window.js";
 import type { MotionDirection } from "../../model/rate-analysis.js";
 import {
   initialViewport,
@@ -157,13 +157,18 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
     // the graph viewport is a THIRD concept, separate from the run and the
     // AnalysisWindow — a fresh workspace always starts on the full run.
     let viewport: SpeedViewport = initialViewport();
+    let intervalOpen = false;
     let overlayTeardown: (() => void) | null = null;
+    let removeOutsideClose: (() => void) | null = null;
+
+    const fullBounds = fullWindow(run);
+    const windowIsFull = (): boolean =>
+      Math.abs(ws.window.startSeconds - fullBounds.startSeconds) < 1e-9 &&
+      Math.abs(ws.window.endSeconds - fullBounds.endSeconds) < 1e-9;
 
     const chartHost = el("div", { className: "chart-host" });
-    const controls = el("div", { className: "speed-controls" });
+    const deck = el("div", { className: "speed-deck" });
     const resultSlot = el("div", { className: "speed-result" });
-    const limitsSlot = el("div", { className: "speed-limits" });
-    const explainSlot = el("div", { className: "speed-lab__explain" });
 
     host.replaceChildren(
       el(
@@ -171,7 +176,7 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
         { className: "speed-lab" },
         el(
           "div",
-          { className: "speed-lab__top" },
+          { className: "speed-lab__head" },
           el(
             "div",
             { className: "speed-lab__intro" },
@@ -183,9 +188,8 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
           ),
           resultSlot,
         ),
+        deck,
         chartHost,
-        controls,
-        el("div", { className: "speed-lab__bottom" }, limitsSlot, explainSlot),
       ),
     );
 
@@ -195,6 +199,29 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
       ws = next;
       render();
     };
+
+    function closeInterval(): void {
+      intervalOpen = false;
+      removeOutsideClose?.();
+      removeOutsideClose = null;
+    }
+    function toggleInterval(): void {
+      if (intervalOpen) {
+        closeInterval();
+      } else {
+        intervalOpen = true;
+        const onDown = (e: Event): void => {
+          const wrap = deck.querySelector(".speed-deck__interval");
+          if (wrap && !wrap.contains(e.target as Node)) {
+            closeInterval();
+            render();
+          }
+        };
+        document.addEventListener("mousedown", onDown);
+        removeOutsideClose = () => document.removeEventListener("mousedown", onDown);
+      }
+      render();
+    }
 
     function drawChart(): void {
       const samples = run.samples;
@@ -242,35 +269,102 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
       });
     }
 
-    function renderControls(): void {
-      const zoomed = viewport.mode === "window";
-      const zoomBtn = button({
-        label: zoomed ? "Full run" : "Zoom to window",
-        onClick: () => {
-          viewport = reduceViewport(viewport, { type: zoomed ? "full-run" : "zoom-to-window" });
-          render();
-        },
-      });
-      zoomBtn.classList.add("speed-controls__zoom");
-      zoomBtn.setAttribute("aria-pressed", String(zoomed));
+    /**
+     * The compact top control deck. Everything is quiet by default; a control
+     * only appears when it can do something useful (Use All / Zoom are hidden
+     * when the window is already the whole run), and the precise Start/End
+     * editor stays folded behind the interval readout.
+     */
+    function renderDeck(): void {
+      deck.replaceChildren();
 
-      controls.replaceChildren(
-        button({
-          label: "Use all",
-          onClick: () => {
-            // window == full run afterwards, so the least-surprising viewport is "full"
-            viewport = reduceViewport(viewport, { type: "use-all" });
-            set(useAllSpeed(ws));
-          },
+      // A. speed-limit segmented control
+      const seg = el("div", { className: "speed-deck__seg" });
+      seg.setAttribute("role", "group");
+      seg.setAttribute("aria-label", "Speed limit");
+      seg.append(el("span", { className: "speed-deck__seg-label", textContent: "LIMIT" }));
+      for (const mph of SPEED_LIMIT_PRESETS_MPH) {
+        const b = el("button", { className: "speed-seg__btn", textContent: String(mph) });
+        b.setAttribute("aria-label", `${mph} mph limit`);
+        b.setAttribute("aria-pressed", String(mph === ws.limitMph));
+        b.addEventListener("click", () => set(setSpeedLimit(ws, mph)));
+        seg.append(b);
+      }
+      deck.append(seg);
+
+      // B / C. interval readout — folds open into the precise editor
+      const intervalWrap = el("div", { className: "speed-deck__interval" });
+      const toggle = el("button", { className: "speed-deck__interval-toggle" });
+      toggle.setAttribute("aria-expanded", String(intervalOpen));
+      toggle.setAttribute("aria-label", "Edit the measured interval");
+      toggle.append(
+        el("span", { className: "speed-deck__interval-label", textContent: "WINDOW" }),
+        el("span", {
+          className: "speed-deck__interval-value",
+          textContent: `${ws.window.startSeconds.toFixed(2)}–${ws.window.endSeconds.toFixed(2)} s`,
         }),
-        stepper("Start", ws.window.startSeconds, (v) =>
-          set(setSpeedWindow(ws, v, ws.window.endSeconds)),
-        ),
-        stepper("End", ws.window.endSeconds, (v) =>
-          set(setSpeedWindow(ws, ws.window.startSeconds, v)),
-        ),
-        zoomBtn,
+        el("span", { className: "speed-deck__chev", textContent: intervalOpen ? "▾" : "▸" }),
       );
+      toggle.addEventListener("click", toggleInterval);
+      intervalWrap.append(toggle);
+
+      if (intervalOpen) {
+        const editor = el(
+          "div",
+          { className: "speed-deck__editor" },
+          stepper("Start", ws.window.startSeconds, (v) =>
+            set(setSpeedWindow(ws, v, ws.window.endSeconds)),
+          ),
+          stepper("End", ws.window.endSeconds, (v) =>
+            set(setSpeedWindow(ws, ws.window.startSeconds, v)),
+          ),
+        );
+        if (!windowIsFull()) {
+          editor.append(
+            button({
+              label: "Use all",
+              onClick: () => {
+                closeInterval();
+                // window == full run afterwards → least-surprising viewport is "full"
+                viewport = reduceViewport(viewport, { type: "use-all" });
+                set(useAllSpeed(ws));
+              },
+            }),
+          );
+        }
+        intervalWrap.append(editor);
+      }
+      deck.append(intervalWrap);
+
+      // D. viewport toggle — contextual (nothing to zoom to at full run)
+      if (viewport.mode === "window") {
+        const b = el("button", { className: "speed-deck__zoom", textContent: "Full run" });
+        b.setAttribute("aria-pressed", "true");
+        b.setAttribute("aria-label", "Show the full run");
+        b.addEventListener("click", () => {
+          viewport = reduceViewport(viewport, { type: "full-run" });
+          render();
+        });
+        deck.append(b);
+      } else if (!windowIsFull()) {
+        const b = el("button", { className: "speed-deck__zoom", textContent: "Zoom" });
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-label", "Zoom the graph to the selected window");
+        b.addEventListener("click", () => {
+          viewport = reduceViewport(viewport, { type: "zoom-to-window" });
+          render();
+        });
+        deck.append(b);
+      }
+
+      // E. compact "how was this calculated?" trigger
+      if (ws.analysis.ok) {
+        const calc = el("button", { className: "speed-deck__calc", textContent: "Δ" });
+        calc.setAttribute("aria-label", "How was this speed calculated?");
+        calc.setAttribute("title", "How was this speed calculated?");
+        calc.addEventListener("click", openExplainer);
+        deck.append(calc);
+      }
     }
 
     function renderResult(): void {
@@ -310,33 +404,9 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
       });
     }
 
-    function renderExplain(): void {
-      explainSlot.replaceChildren();
-      if (!ws.analysis.ok) return;
-      explainSlot.append(
-        button({
-          label: "How was this speed calculated?",
-          variant: "primary",
-          onClick: openExplainer,
-        }),
-      );
-    }
-
-    function renderLimits(): void {
-      limitsSlot.replaceChildren(el("span", { className: "speed-limits__label", textContent: "SPEED LIMIT" }));
-      for (const mph of SPEED_LIMIT_PRESETS_MPH) {
-        const b = button({ label: `${mph} mph`, onClick: () => set(setSpeedLimit(ws, mph)) });
-        b.setAttribute("aria-pressed", String(mph === ws.limitMph));
-        if (mph === ws.limitMph) b.classList.add("btn--primary");
-        limitsSlot.append(b);
-      }
-    }
-
     function render(): void {
-      renderControls();
+      renderDeck();
       renderResult();
-      renderLimits();
-      renderExplain();
       drawChart();
     }
 
@@ -344,6 +414,7 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
 
     return () => {
       overlayTeardown?.();
+      removeOutsideClose?.();
       chart.destroy();
       host.replaceChildren();
     };

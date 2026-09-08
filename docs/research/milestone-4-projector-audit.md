@@ -173,3 +173,45 @@ interval), **graph viewport** (`full` / `window`). Zoom changes only the viewpor
 - [ ] **calculation invariance:** velocity / speed / direction / speed-limit /
       modal numbers identical before zoom, while zoomed, and after `Full run`
 - [ ] no horizontal overflow, no clipping, graph stays dominant, in every theme
+
+---
+
+## Minimal control deck
+
+The top region is: title + subtitle (left), `YOUR SPEED` result (right), and a
+single quiet control deck below them. **Nothing sits below the graph.**
+
+### Layout / states (each × 1024–1920, each theme)
+- full run · trimmed window · interval editor expanded · zoomed · toward · away ·
+  stationary · 2 / 5 / 10 selected · Δ modal open
+
+### Requirements
+- [ ] visual priority top-to-bottom: **speed result → graph → title → deck**; the
+      deck never competes with the graph or the speed value
+- [ ] the deck controls recede by default — transparent fill, muted text,
+      restrained border — and gain contrast on hover / focus; the selected limit
+      and an active `Full run` use the accent
+- [ ] **speed-limit** is a compact segmented control `LIMIT 2 5 10`; real buttons,
+      `aria-pressed`, `aria-label="N mph limit"`, 32 px min hit height
+- [ ] **interval** shows one readout `WINDOW 0.00–4.00 s ▸`; clicking it folds
+      open the `Start [−] v [+]` / `End [−] v [+]` editor (chevron flips); it
+      folds shut on a second click, on a click outside (real `mousedown`), on
+      `Use all`, and on any view reset. No permanent steppers.
+- [ ] the **graph drag handles are the primary** window edit and keep working
+      with the editor open or shut
+- [ ] **Use all** is shown only inside the editor and only when the window is
+      trimmed; hidden at full run; clicking it restores the full run (and, if
+      zoomed, the full viewport)
+- [ ] **Zoom** is shown only when the window is trimmed and the viewport is full;
+      `Full run` replaces it while zoomed; it is the only persistent viewport
+      control and never appears at full-run window
+- [ ] **Δ** is the calculation trigger — text `Δ`, `title` / `aria-label`
+      "How was this speed calculated?"; subtle by default, clear on hover/focus;
+      opens the unchanged modal
+- [ ] result block stays `YOUR SPEED` / big mph / direction only — no supporting
+      metrics leak back onto the main view
+- [ ] wide: title+deck left, result right, graph full-width below; narrow: the
+      head may stack (result under title) and the deck wraps — the speed value
+      never shrinks to keep one row; no horizontal overflow
+- [ ] Kusama: the deck's segmented control, interval editor and Δ sit on their
+      own surfaces / borders and stay readable over the dot field
