@@ -861,6 +861,93 @@
   font-weight: 650;
 }
 
+/* ── Sequence Lab ───────────────────────────────────────────────────────── */
+.sequence-lab {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--s-3);
+  flex: 1;
+  min-height: 0;
+}
+.sequence-lab--collecting {
+  grid-template-rows: auto auto 1fr;
+}
+.seq-deck {
+  row-gap: var(--s-2);
+}
+
+.sequence-graphs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+  min-height: 0;
+}
+.sequence-graphs--single {
+  grid-template-columns: 1fr;
+}
+.sequence-graph {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: 0;
+}
+.sequence-graph__title {
+  font-size: var(--type-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.sequence-graph .chart-host {
+  flex: 1;
+  min-height: 300px;
+  height: 54vh;
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+/* the sequence graph's connecting line is a subtle guide — points lead */
+.sequence-terms-chart .trace {
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+
+@media (max-width: 1100px) {
+  .sequence-graphs {
+    grid-template-columns: 1fr;
+  }
+  .sequence-graph .chart-host {
+    height: 42vh;
+  }
+}
+
+.sequence-result {
+  align-items: flex-end;
+  text-align: right;
+}
+.sequence-result__label {
+  /* inherits .speed-result__head */
+}
+.sequence-result__status {
+  font-size: var(--type-body);
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
+}
+.sequence-result__formula {
+  font-size: var(--type-label);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .sequence-result {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
 /* Target picker */
 .target-picker {
   position: fixed;
