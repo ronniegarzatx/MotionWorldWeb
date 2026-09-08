@@ -63,6 +63,12 @@ describe("portable artifact (real build)", () => {
     expect(html).not.toMatch(/mathjax|katex/i);
   });
 
+  it("bundles Speed Lab (OLS math is all local TS)", () => {
+    expect(html).toContain("Speed Lab");
+    expect(html).toContain("YOUR SPEED");
+    expect(html).toMatch(/How was this speed calculated/);
+  });
+
   it("applies the offline CSP", () => {
     expect(html).toMatch(/Content-Security-Policy[\s\S]*default-src 'none'/i);
   });

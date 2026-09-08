@@ -26,15 +26,15 @@ button — with no native helper, driver, backend, or admin rights. Direct WebHI
 is viable.
 
 **Now:** the Motion World application — a six-tool Home with **Live Lab**,
-**Data Display**, and **Walk the Line** active, a **Runs** utility, on the
-sensor/acquisition/model layer built and hardware-verified in M0. Protocol
-diagnostics live behind `?debug=sensor`.
+**Data Display**, **Walk the Line**, **Snapshot Lab**, and **Speed Lab** active,
+a **Runs** utility, on the sensor/acquisition/model layer built and
+hardware-verified in M0. Protocol diagnostics live behind `?debug=sensor`.
 
 | | |
 |---|---|
-| **Tools** | Live Lab · Data Display · Walk the Line · Snapshot Lab |
+| **Tools** | Live Lab · Data Display · Walk the Line · Snapshot Lab · Speed Lab |
 | **Utility** | Runs (`#/runs`) — saved collections |
-| **Coming next** | Speed Lab · Sequence Lab |
+| **Coming next** | Sequence Lab |
 
 - **Milestone 1** — app shell, Home, Live Lab, Data Display, shared acquisition
   control, web-native dark-first design system.
@@ -81,6 +81,28 @@ diagnostics live behind `?debug=sensor`.
     is a projector overlay; long equations never crop.
   - Works from the latest run or a saved run (**Runs → Open in Snapshot**) —
     no sensor needed.
+
+- **Milestone 4 — Speed Lab.** Turn a selected section of position-vs-time
+  motion into an honest speed / velocity calculation for the class.
+  - Collect a run in Speed Lab (the result appears **after Stop**, never live),
+    use the latest run, or open a saved one (**Runs → Open in Speed Lab**, no
+    sensor needed). Drag the shaded `AnalysisWindow` band to pick the interval.
+  - **The number on screen is the ordinary-least-squares best-fit slope of every
+    sample in the selected interval** — not `(last − first) ÷ Δt`. The
+    two-point endpoint slope appears only inside **"How was this speed
+    calculated?"** as the intuitive check, alongside the honest note that Motion
+    World uses the best-fit slope of all the samples.
+  - **Speed** is an unsigned magnitude: big **mph** (and smaller m/s).
+    **Velocity** keeps its sign (`+2.06 m/s`). **Direction** is a word — *away
+    from sensor* (positive slope) / *toward sensor* (negative) / *stationary*
+    (|slope| < 0.05 m/s). Never "negative speed".
+  - `mph = |slope| × 2.2369362920544` — one centralized, tested constant
+    (`MPH_PER_MPS`).
+  - Compared against a **speed-limit preset** — `2 / 5 / 10 mph`, default 5 —
+    with a plain "0.4 mph under the 5 mph limit" line. **No scoring, no stars,
+    no pass/fail.**
+  - Refuses with plain copy (never NaN) for an interval that is too short or has
+    invalid timestamps.
 
 - Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
 - Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)

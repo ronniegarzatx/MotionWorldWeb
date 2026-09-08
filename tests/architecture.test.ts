@@ -90,6 +90,10 @@ describe("pure-model architecture guard", () => {
     "model/classroom-equation.ts",
     "model/snapshot-workspace.ts",
     "model/analysis-window.ts",
+    "model/rate-analysis.ts",
+    "model/speed-limit.ts",
+    "model/endpoint-slope.ts",
+    "model/speed-workspace.ts",
   ];
   it("the model math never touches the DOM", () => {
     const offenders = files
