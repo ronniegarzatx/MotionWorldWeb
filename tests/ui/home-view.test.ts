@@ -13,12 +13,12 @@ function setup() {
 const tiles = (host: HTMLElement) => [...host.querySelectorAll(".tile")] as HTMLButtonElement[];
 
 describe("home-view", () => {
-  it("has 6 tiles — 4 active, 2 disabled", () => {
+  it("has 6 tiles — 5 active, 1 disabled", () => {
     const { host } = setup();
     const all = tiles(host);
     expect(all).toHaveLength(6);
-    expect(all.filter((t) => !t.disabled)).toHaveLength(4);
-    expect(all.filter((t) => t.disabled)).toHaveLength(2);
+    expect(all.filter((t) => !t.disabled)).toHaveLength(5);
+    expect(all.filter((t) => t.disabled)).toHaveLength(1);
   });
 
   it("renders exactly the six peer tiles in order", () => {
@@ -33,23 +33,25 @@ describe("home-view", () => {
     ]);
   });
 
-  it("Live Lab, Data Display, Walk the Line, Snapshot Lab are active and navigate", () => {
+  it("Live Lab, Data Display, Walk the Line, Snapshot Lab, Speed Lab are active and navigate", () => {
     const { host, navigate } = setup();
-    const [live, data, walk, snapshot] = tiles(host);
-    for (const t of [live, data, walk, snapshot]) expect(t!.disabled).toBe(false);
+    const [live, data, walk, snapshot, speed] = tiles(host);
+    for (const t of [live, data, walk, snapshot, speed]) expect(t!.disabled).toBe(false);
     live!.click();
     data!.click();
     walk!.click();
     snapshot!.click();
+    speed!.click();
     expect(navigate).toHaveBeenNthCalledWith(1, "live");
     expect(navigate).toHaveBeenNthCalledWith(2, "data");
     expect(navigate).toHaveBeenNthCalledWith(3, "walk");
     expect(navigate).toHaveBeenNthCalledWith(4, "snapshot");
+    expect(navigate).toHaveBeenNthCalledWith(5, "speed");
   });
 
-  it("Speed / Sequence are disabled and inert", () => {
+  it("Sequence Lab is disabled and inert", () => {
     const { host, navigate } = setup();
-    const disabled = tiles(host).slice(4);
+    const disabled = tiles(host).slice(5);
     for (const t of disabled) {
       expect(t.disabled).toBe(true);
       expect(t.className).toContain("tile--disabled");

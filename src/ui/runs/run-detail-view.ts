@@ -57,6 +57,10 @@ export function mountRunDetailView(host: HTMLElement, deps: RunDetailDeps): () =
           variant: "primary",
           onClick: () => deps.navigate("snapshot", stored.id),
         }),
+        button({
+          label: "Open in Speed Lab",
+          onClick: () => deps.navigate("speed", stored.id),
+        }),
       ),
       el(
         "div",

@@ -49,7 +49,12 @@ describe("locationFromHash", () => {
 
   it("unknown hash -> home", () => {
     expect(locationFromHash("#/nope", noFlags)).toEqual({ route: "home" });
-    expect(locationFromHash("#/speed", noFlags)).toEqual({ route: "home" });
+    expect(locationFromHash("#/totally-unknown", noFlags)).toEqual({ route: "home" });
+  });
+
+  it("#/speed and #/speed/<id>", () => {
+    expect(locationFromHash("#/speed", noFlags)).toEqual({ route: "speed" });
+    expect(locationFromHash("#/speed/saved-9", noFlags)).toEqual({ route: "speed", param: "saved-9" });
   });
 
   it("#/diagnostics needs a debug or fake flag", () => {

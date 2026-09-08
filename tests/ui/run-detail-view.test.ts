@@ -63,6 +63,12 @@ describe("run-detail-view", () => {
     expect(navigate).toHaveBeenCalledWith("snapshot", "r3b");
   });
 
+  it("Open in Speed Lab routes to #/speed/<id>", async () => {
+    const { host, navigate } = await withRun("r3c");
+    [...host.querySelectorAll("button")].find((b) => b.textContent === "Open in Speed Lab")!.click();
+    expect(navigate).toHaveBeenCalledWith("speed", "r3c");
+  });
+
   it("missing run -> a friendly message, not a crash", async () => {
     const store = new MemoryRunStore();
     const host = document.createElement("div");

@@ -123,6 +123,39 @@ describe("startApp", () => {
     expect(app.controller).toBe(c1);
   });
 
+  it("#/speed mounts Speed Lab with the shared controller — no 2nd controller, no connect", async () => {
+    const { container, adapter, app } = await boot();
+    const connectSpy = vi.spyOn(adapter, "connect");
+    const c1 = app.controller;
+    hashTo("#/speed");
+    await vi.runAllTimersAsync();
+    expect(container.querySelector(".speed-lab, .speed-empty")).not.toBeNull();
+    expect(connectSpy).not.toHaveBeenCalled();
+    expect(app.controller).toBe(c1);
+  });
+
+  it("#/speed/<id> mounts Speed Lab from a saved run", async () => {
+    const { container, runStore } = await boot();
+    const { serializeRun } = await import("../../src/model/stored-run.js");
+    const { makeMotionRun } = await import("../../src/model/motion-run.js");
+    const { makeMotionSample } = await import("../../src/model/motion-sample.js");
+    await runStore.save(
+      serializeRun(
+        makeMotionRun({
+          id: "speed-me",
+          samplerHz: 25,
+          source: "fake",
+          deviceLabel: null,
+          samples: Array.from({ length: 20 }, (_, i) => makeMotionSample(i * 0.04, 1 + i * 0.05)),
+        }),
+        1,
+      ),
+    );
+    hashTo("#/speed/speed-me");
+    await vi.runAllTimersAsync();
+    expect(container.querySelector(".speed-result__value")).not.toBeNull();
+  });
+
   it("#/snapshot/<id> mounts Snapshot from a saved run", async () => {
     const { container, runStore } = await boot();
     const { serializeRun } = await import("../../src/model/stored-run.js");
