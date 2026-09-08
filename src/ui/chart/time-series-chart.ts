@@ -22,7 +22,15 @@ export interface ChartInput {
   readonly yLabel: string;
   readonly overlays?: readonly { readonly d: string; readonly kind: "model" }[];
   readonly markers?: readonly { readonly t: number; readonly x: number }[];
-  readonly selection?: { readonly startT: number; readonly endT: number };
+  readonly selection?: {
+    readonly startT: number;
+    readonly endT: number;
+    /** draggable handles + band; region outside the selection is subdued. */
+    readonly editable?: boolean;
+    readonly onChange?: (range: { startT: number; endT: number }) => void;
+  };
+  /** A function y = f(x) sampled across the x-domain and drawn as `.model`. */
+  readonly functionOverlay?: (x: number) => number;
   /**
    * A fixed reference curve (Walk the Line's target), drawn with distinct
    * styling in the SAME coordinate system as `series`, behind the student trace.
@@ -52,11 +60,29 @@ export function pixelYToMetres(g: YGeometry, pixelY: number): number {
   return makeScale([g.pixelBottom, g.pixelTop], g.domain)(pixelY);
 }
 
+/** The last render's X mapping — for converting a horizontal drag to seconds. */
+export interface XGeometry {
+  readonly domain: readonly [number, number];
+  readonly pixelLeft: number;
+  readonly pixelRight: number;
+}
+
+export function pixelXToSeconds(g: XGeometry, pixelX: number): number {
+  return makeScale([g.pixelLeft, g.pixelRight], g.domain)(pixelX);
+}
+
+export function secondsPerPixelX(g: XGeometry): number {
+  const span = g.pixelRight - g.pixelLeft;
+  if (span === 0) return 0;
+  return (g.domain[1] - g.domain[0]) / span;
+}
+
 export interface ChartHandle {
   update(input: ChartInput): void;
   destroy(): void;
   /** null before the first render. */
   yGeometry(): YGeometry | null;
+  xGeometry(): XGeometry | null;
 }
 
 const MARGIN = { top: 16, right: 20, bottom: 40, left: 60 } as const;
@@ -163,6 +189,10 @@ export function mountChart(host: HTMLElement): ChartHandle {
   let prevY: [number, number] | undefined;
   let lastInput: ChartInput | null = null;
   let lastYGeometry: YGeometry | null = null;
+  let lastXGeometry: XGeometry | null = null;
+  let selDrag:
+    | { pointerId: number; grab: "start" | "end" | "band"; startClientX: number; from: { startT: number; endT: number } }
+    | null = null;
 
   const redraw = (): void => {
     if (!lastInput) return;
@@ -186,6 +216,7 @@ export function mountChart(host: HTMLElement): ChartHandle {
     const xScale = makeScale(xDomain, [plot.x0, plot.x1]);
     const yScale = makeScale(yDomain, [plot.y0, plot.y1]);
     lastYGeometry = { domain: yDomain, pixelTop: plot.y1, pixelBottom: plot.y0 };
+    lastXGeometry = { domain: xDomain, pixelLeft: plot.x0, pixelRight: plot.x1 };
 
     while (root.firstChild) root.removeChild(root.firstChild);
     const g = svg("g");
@@ -224,21 +255,57 @@ export function mountChart(host: HTMLElement): ChartHandle {
     yTitle.textContent = input.yLabel;
     g.appendChild(yTitle);
 
-    // selection band (Snapshot Lab, M5 — static in M1)
+    // interval selection band (+ editable handles for Snapshot Lab)
     if (input.selection) {
-      const sx0 = xScale(input.selection.startT);
-      const sx1 = xScale(input.selection.endT);
-      g.appendChild(
-        svg("rect", {
-          class: "selection-band",
-          x: Math.min(sx0, sx1),
-          y: plot.y1,
-          width: Math.abs(sx1 - sx0),
-          height: plot.y0 - plot.y1,
-          fill: "var(--accent)",
-          "fill-opacity": "0.12",
-        }),
-      );
+      const sel = input.selection;
+      const sx0 = xScale(Math.min(sel.startT, sel.endT));
+      const sx1 = xScale(Math.max(sel.startT, sel.endT));
+      const band = svg("rect", {
+        class: "selection-band",
+        x: sx0,
+        y: plot.y1,
+        width: Math.max(0, sx1 - sx0),
+        height: plot.y0 - plot.y1,
+        fill: "var(--accent)",
+        "fill-opacity": "0.12",
+      });
+      g.appendChild(band);
+
+      if (sel.editable && sel.onChange) {
+        // subdue the region outside the selection
+        g.appendChild(svg("rect", { class: "sel-mask", x: plot.x0, y: plot.y1, width: Math.max(0, sx0 - plot.x0), height: plot.y0 - plot.y1, fill: "var(--surface)", "fill-opacity": "0.45" }));
+        g.appendChild(svg("rect", { class: "sel-mask", x: sx1, y: plot.y1, width: Math.max(0, plot.x1 - sx1), height: plot.y0 - plot.y1, fill: "var(--surface)", "fill-opacity": "0.45" }));
+
+        band.setAttribute("pointer-events", "fill");
+        (band as SVGElement & { style: CSSStyleDeclaration }).style.cursor = "grab";
+        band.addEventListener("pointerdown", (e) => beginSelDrag(e as PointerEvent, "band"));
+
+        for (const [grab, px] of [["start", sx0] as const, ["end", sx1] as const]) {
+          g.appendChild(svg("line", { class: `sel-handle sel-handle-${grab}`, x1: px, y1: plot.y1, x2: px, y2: plot.y0, stroke: "var(--accent)", "stroke-width": 2 }));
+          const hit = svg("rect", { class: `sel-handle-hit sel-handle-hit-${grab}`, x: px - 9, y: plot.y1, width: 18, height: plot.y0 - plot.y1, fill: "transparent", "pointer-events": "fill" });
+          (hit as SVGElement & { style: CSSStyleDeclaration }).style.cursor = "ew-resize";
+          hit.addEventListener("pointerdown", (e) => beginSelDrag(e as PointerEvent, grab));
+          g.appendChild(hit);
+        }
+      }
+    }
+
+    // model curve (Snapshot Lab) — the EXACT fit, sampled across the x-domain
+    if (input.functionOverlay) {
+      const f = input.functionOverlay;
+      const steps = 120;
+      let d = "";
+      for (let i = 0; i <= steps; i++) {
+        const x = xDomain[0] + (i / steps) * (xDomain[1] - xDomain[0]);
+        const y = f(x);
+        if (!Number.isFinite(y)) {
+          d = "";
+          continue;
+        }
+        const cmd = d === "" ? "M" : "L";
+        d += `${d === "" ? "" : " "}${cmd} ${xScale(x).toFixed(2)} ${yScale(y).toFixed(2)}`;
+      }
+      if (d) g.appendChild(svg("path", { class: "model-curve", d }));
     }
 
     // clip everything data-driven to the plot rectangle
@@ -303,6 +370,64 @@ export function mountChart(host: HTMLElement): ChartHandle {
     }
   };
 
+  // ── editable selection drag ─────────────────────────────────────────────
+  const MIN_GAP_PX = 6;
+
+  function beginSelDrag(e: PointerEvent, grab: "start" | "end" | "band"): void {
+    const sel = lastInput?.selection;
+    if (!sel || !sel.editable || !sel.onChange) return;
+    selDrag = { pointerId: e.pointerId, grab, startClientX: e.clientX, from: { startT: sel.startT, endT: sel.endT } };
+    if (typeof host.setPointerCapture === "function") {
+      try {
+        host.setPointerCapture(e.pointerId);
+      } catch {
+        /* jsdom */
+      }
+    }
+    host.addEventListener("pointermove", onSelMove);
+    host.addEventListener("pointerup", onSelUp);
+    host.addEventListener("pointercancel", onSelUp);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function onSelMove(e: PointerEvent): void {
+    const sel = lastInput?.selection;
+    const gx = lastXGeometry;
+    if (!selDrag || !sel?.onChange || !gx || e.pointerId !== selDrag.pointerId) return;
+    const perPx = secondsPerPixelX(gx);
+    const dt = (e.clientX - selDrag.startClientX) * perPx;
+    const [lo, hi] = gx.domain;
+    const minGap = MIN_GAP_PX * perPx;
+    let { startT, endT } = selDrag.from;
+
+    if (selDrag.grab === "band") {
+      const width = endT - startT;
+      startT = Math.min(Math.max(lo, startT + dt), hi - width);
+      endT = startT + width;
+    } else if (selDrag.grab === "start") {
+      startT = Math.min(Math.max(lo, startT + dt), endT - minGap);
+    } else {
+      endT = Math.max(Math.min(hi, endT + dt), startT + minGap);
+    }
+    sel.onChange({ startT, endT });
+  }
+
+  function onSelUp(e: PointerEvent): void {
+    if (!selDrag || e.pointerId !== selDrag.pointerId) return;
+    selDrag = null;
+    host.removeEventListener("pointermove", onSelMove);
+    host.removeEventListener("pointerup", onSelUp);
+    host.removeEventListener("pointercancel", onSelUp);
+    if (typeof host.releasePointerCapture === "function") {
+      try {
+        host.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   const onResize = (): void => redraw();
   window.addEventListener("resize", onResize);
 
@@ -313,10 +438,15 @@ export function mountChart(host: HTMLElement): ChartHandle {
     },
     destroy() {
       window.removeEventListener("resize", onResize);
+      host.removeEventListener("pointermove", onSelMove);
+      host.removeEventListener("pointerup", onSelUp);
       root.remove();
     },
     yGeometry() {
       return lastYGeometry;
+    },
+    xGeometry() {
+      return lastXGeometry;
     },
   };
 }

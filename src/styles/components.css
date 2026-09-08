@@ -192,10 +192,19 @@
   stroke-linejoin: round;
   stroke-linecap: round;
 }
-.chart-svg .overlay--model {
+.chart-svg .overlay--model,
+.chart-svg .model-curve {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2;
+  stroke-width: 2.5;
+}
+.chart-svg .sel-handle {
+  stroke: var(--accent);
+}
+.chart-svg .marker {
+  fill: var(--trace);
+  stroke: var(--surface);
+  stroke-width: 1;
 }
 
 .dev-link {
