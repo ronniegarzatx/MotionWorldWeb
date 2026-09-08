@@ -76,7 +76,7 @@ describe("snapshot-lab-view — workspace", () => {
     expect(btn(host, "Make Snapshot")).toBeTruthy();
   });
 
-  it("Make Snapshot -> Classroom axes, 5 markers, POINTS (5) collapsed", async () => {
+  it("Make Snapshot -> Classroom axes, 5 markers, dense motion trace, legend, POINTS (5) collapsed", async () => {
     const { host } = await withCurrentRun();
     btn(host, "Select Window").click();
     btn(host, "Make Snapshot").click();
@@ -85,8 +85,31 @@ describe("snapshot-lab-view — workspace", () => {
     expect(titles).toContain("Classroom x");
     expect(titles).toContain("Classroom y");
     expect(host.querySelectorAll(".marker")).toHaveLength(5);
+    // dense motion trace behind the points
+    const trace = host.querySelector(".motion-trace");
+    expect(trace).not.toBeNull();
+    expect(trace!.getAttribute("d")!.match(/[ML]/g)!.length).toBeGreaterThan(20);
+    // legend (no model yet)
+    expect([...host.querySelectorAll(".snapshot-legend__item")].map((n) => n.textContent)).toEqual([
+      "Motion",
+      "Points",
+    ]);
     expect(host.querySelector(".snapshot-points__header")!.textContent).toContain("POINTS (5)");
     expect((host.querySelector(".snapshot-points__table") as HTMLElement).hidden).toBe(true);
+  });
+
+  it("legend gains Model once a fit exists; the model curve stays separate", async () => {
+    const { host } = await withCurrentRun();
+    btn(host, "Select Window").click();
+    btn(host, "Make Snapshot").click();
+    btn(host, "Suggest").click();
+    expect([...host.querySelectorAll(".snapshot-legend__item")].map((n) => n.textContent)).toEqual([
+      "Motion",
+      "Points",
+      "Model",
+    ]);
+    expect(host.querySelector(".motion-trace")).not.toBeNull();
+    expect(host.querySelector(".model-curve")).not.toBeNull();
   });
 
   it("point-count stepper rebuilds the markers", async () => {

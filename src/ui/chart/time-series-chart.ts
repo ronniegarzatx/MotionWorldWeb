@@ -31,6 +31,11 @@ export interface ChartInput {
   };
   /** A function y = f(x) sampled across the x-domain and drawn as `.model`. */
   readonly functionOverlay?: (x: number) => number;
+  /** A dense contextual trace drawn BEHIND markers + model (Snapshot Lab's
+   *  classroom motion trace). Distinct from `series` (the primary trace). */
+  readonly motionTrace?: { readonly x: readonly number[]; readonly y: readonly number[] };
+  /** Marker radius (default 3; Snapshot uses a larger value). */
+  readonly markerRadius?: number;
   /**
    * A fixed reference curve (Walk the Line's target), drawn with distinct
    * styling in the SAME coordinate system as `series`, behind the student trace.
@@ -290,23 +295,6 @@ export function mountChart(host: HTMLElement): ChartHandle {
       }
     }
 
-    // model curve (Snapshot Lab) — the EXACT fit, sampled across the x-domain
-    if (input.functionOverlay) {
-      const f = input.functionOverlay;
-      const steps = 120;
-      let d = "";
-      for (let i = 0; i <= steps; i++) {
-        const x = xDomain[0] + (i / steps) * (xDomain[1] - xDomain[0]);
-        const y = f(x);
-        if (!Number.isFinite(y)) {
-          d = "";
-          continue;
-        }
-        const cmd = d === "" ? "M" : "L";
-        d += `${d === "" ? "" : " "}${cmd} ${xScale(x).toFixed(2)} ${yScale(y).toFixed(2)}`;
-      }
-      if (d) g.appendChild(svg("path", { class: "model-curve", d }));
-    }
 
     // clip everything data-driven to the plot rectangle
     const defs = svg("defs");
@@ -358,15 +346,42 @@ export function mountChart(host: HTMLElement): ChartHandle {
       }
     }
 
+    // dense contextual MOTION trace — behind the sampled points + model
+    if (input.motionTrace && input.motionTrace.x.length > 0) {
+      const mt = input.motionTrace;
+      const md = buildPathD({ t: mt.x, x: mt.y }, xScale, yScale);
+      if (md) gClip.appendChild(svg("path", { class: "motion-trace", d: md }));
+    }
+
     // the (student) trace
     const traceD = buildPathD(input.series, xScale, yScale);
     const trace = svg("path", { class: "trace" });
     if (traceD) trace.setAttribute("d", traceD);
     gClip.appendChild(trace);
 
-    // markers
+    // MODEL curve (Snapshot Lab) — the EXACT fit, above the motion trace,
+    // below the sampled points so the teaching coordinates stay highest-contrast
+    if (input.functionOverlay) {
+      const f = input.functionOverlay;
+      const steps = 160;
+      let d = "";
+      for (let i = 0; i <= steps; i++) {
+        const x = xDomain[0] + (i / steps) * (xDomain[1] - xDomain[0]);
+        const y = f(x);
+        if (!Number.isFinite(y)) {
+          d = "";
+          continue;
+        }
+        const cmd = d === "" ? "M" : "L";
+        d += `${d === "" ? "" : " "}${cmd} ${xScale(x).toFixed(2)} ${yScale(y).toFixed(2)}`;
+      }
+      if (d) gClip.appendChild(svg("path", { class: "model-curve", d }));
+    }
+
+    // sampled POINTS — on top, highest local contrast
+    const markerR = input.markerRadius ?? 3;
     for (const m of input.markers ?? []) {
-      gClip.appendChild(svg("circle", { class: "marker", cx: xScale(m.t), cy: yScale(m.x), r: 3 }));
+      gClip.appendChild(svg("circle", { class: "marker", cx: xScale(m.t), cy: yScale(m.x), r: markerR }));
     }
   };
 

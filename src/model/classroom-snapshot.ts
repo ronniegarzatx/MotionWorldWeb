@@ -1,5 +1,5 @@
 import type { AnalysisWindow } from "./analysis-window.js";
-import { windowDurationSeconds } from "./analysis-window.js";
+import { activeSamples, windowDurationSeconds } from "./analysis-window.js";
 import type { MotionRun } from "./motion-run.js";
 import { positionAt } from "./run-interpolation.js";
 
@@ -20,12 +20,21 @@ export interface ClassroomPoint {
   readonly y: number;
 }
 
+export type ClassroomTracePoint = ClassroomPoint;
+
 export interface ClassroomSnapshot {
   readonly sourceRunId: string;
   readonly window: AnalysisWindow;
   readonly pointCount: number;
   readonly points: readonly ClassroomPoint[]; // DISPLAY — y snapped to 0.5
   readonly fitPoints: readonly ClassroomPoint[]; // MODELLING — y unrounded
+  /**
+   * A dense trace of EVERY raw sample inside the window, mapped continuously to
+   * classroom x (0 → pointCount−1) with the same (unrounded) classroom-y
+   * transform. Restores the visual shape of the selected motion behind the
+   * sampled points. Never rounded.
+   */
+  readonly tracePoints: readonly ClassroomTracePoint[];
   readonly xLabel: "Classroom x";
   readonly yLabel: "Classroom y";
 }
@@ -62,12 +71,35 @@ export function makeClassroomSnapshot(
     points.push({ x: k, y: snapHalf(y) });
   }
 
+  // The SAME time -> classroom-x map used for the sampled points, applied
+  // continuously to every raw sample in the window: t_start -> 0, t_end -> N-1.
+  const span = n - 1;
+  const timeToClassroomX = (t: number): number =>
+    duration <= 0 ? 0 : ((t - window.startSeconds) / duration) * span;
+
+  const inner = activeSamples(window, run).map((s) => ({
+    x: timeToClassroomX(s.timestampSeconds),
+    y: s.positionMeters,
+  }));
+  // anchor the dense trace exactly to the classroom-x endpoints so it lines up
+  // under the sampled points (y at an endpoint = the same interpolation the
+  // fit points use)
+  const tracePoints: ClassroomTracePoint[] = [];
+  if (inner.length === 0 || inner[0]!.x > 1e-9) {
+    tracePoints.push({ x: 0, y: positionAt(run, window.startSeconds) });
+  }
+  tracePoints.push(...inner);
+  if (inner.length === 0 || inner[inner.length - 1]!.x < span - 1e-9) {
+    tracePoints.push({ x: span, y: positionAt(run, window.endSeconds) });
+  }
+
   return {
     sourceRunId: run.id,
     window,
     pointCount: n,
     points: Object.freeze(points),
     fitPoints: Object.freeze(fitPoints),
+    tracePoints: Object.freeze(tracePoints),
     xLabel: "Classroom x",
     yLabel: "Classroom y",
   };
@@ -79,7 +111,12 @@ export function classroomDomain(snapshot: ClassroomSnapshot): {
   x: [number, number];
   y: [number, number];
 } {
-  const ys = snapshot.fitPoints.map((p) => p.y);
+  // derived from the dense trace + the sampled points, at snapshot-creation
+  // time, then FIXED — a later model overlay never rescales the axes.
+  const ys = [
+    ...snapshot.tracePoints.map((p) => p.y),
+    ...snapshot.fitPoints.map((p) => p.y),
+  ];
   const lo = Math.min(...ys);
   const hi = Math.max(...ys);
   const yLo = Math.floor((lo - 0.25) / SNAP) * SNAP;

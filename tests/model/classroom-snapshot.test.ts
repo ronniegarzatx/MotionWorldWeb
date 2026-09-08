@@ -75,4 +75,68 @@ describe("classroomDomain", () => {
     expect(d.y[0]).toBeLessThanOrEqual(1);
     expect(d.y[1]).toBeGreaterThanOrEqual(3);
   });
+
+  it("derives y from the dense trace + sampled points (a mid excursion isn't clipped)", () => {
+    // a bump: rise to 3.4 in the middle then back
+    const bump = makeMotionRun({
+      id: "bump",
+      samplerHz: 25,
+      source: "fake",
+      deviceLabel: null,
+      samples: Array.from({ length: 81 }, (_, i) => {
+        const t = i * 0.05;
+        return makeMotionSample(t, 1.0 + 2.4 * Math.sin((Math.PI * t) / 4));
+      }),
+    });
+    const s = makeClassroomSnapshot(bump, fullWindow(bump), 3); // 3 points miss the peak
+    const d = classroomDomain(s);
+    const traceMax = Math.max(...s.tracePoints.map((p) => p.y));
+    expect(d.y[1]).toBeGreaterThanOrEqual(traceMax); // the peak is inside the domain
+  });
+});
+
+describe("dense classroom motion trace", () => {
+  it("includes every window sample + is anchored to x = 0 and x = N-1", () => {
+    const s = makeClassroomSnapshot(walk, withRange(fullWindow(walk), walk, 0.5, 3.5), 5);
+    // 0.5..3.5 s of a 0.04 s stream -> ~75 interior samples + 2 anchors
+    expect(s.tracePoints.length).toBeGreaterThan(70);
+    expect(s.tracePoints[0]!.x).toBe(0);
+    expect(s.tracePoints.at(-1)!.x).toBeCloseTo(4, 9);
+  });
+
+  it("interior x values are continuous / non-integer", () => {
+    const s = makeClassroomSnapshot(walk, fullWindow(walk), 5);
+    const interior = s.tracePoints.slice(1, -1);
+    const nonInteger = interior.filter((p) => !Number.isInteger(p.x));
+    expect(nonInteger.length).toBeGreaterThan(interior.length / 2);
+    // monotone increasing in x
+    for (let i = 1; i < s.tracePoints.length; i++) {
+      expect(s.tracePoints[i]!.x).toBeGreaterThanOrEqual(s.tracePoints[i - 1]!.x);
+    }
+  });
+
+  it("trace y is UNROUNDED while display points stay snapped to 0.5", () => {
+    const s = makeClassroomSnapshot(walk, withRange(fullWindow(walk), walk, 0.6, 3.4), 5);
+    const offHalf = s.tracePoints.filter((p) => Math.abs((p.y / 0.5) % 1) > 1e-6);
+    expect(offHalf.length).toBeGreaterThan(0); // trace is not on the 0.5 grid
+    expect(s.points.every((p) => Math.abs((p.y / 0.5) % 1) < 1e-9)).toBe(true);
+  });
+
+  it("a raw sample at a representative time maps to the same classroom coord as its fit point", () => {
+    // full 4 s walk, 5 points -> representative times 0,1,2,3,4 s exist as samples
+    const s = makeClassroomSnapshot(walk, fullWindow(walk), 5);
+    for (let k = 0; k < 5; k++) {
+      const fp = s.fitPoints[k]!;
+      // the trace point nearest classroom-x = k
+      const near = s.tracePoints.reduce((a, b) => (Math.abs(b.x - k) < Math.abs(a.x - k) ? b : a));
+      expect(near.x).toBeCloseTo(k, 6);
+      expect(near.y).toBeCloseTo(fp.y, 6);
+    }
+  });
+
+  it("does not mutate the source run", () => {
+    const snap = JSON.stringify(walk.samples.map((s) => [s.timestampSeconds, s.positionMeters]));
+    makeClassroomSnapshot(walk, fullWindow(walk), 8);
+    expect(JSON.stringify(walk.samples.map((s) => [s.timestampSeconds, s.positionMeters]))).toBe(snap);
+  });
 });

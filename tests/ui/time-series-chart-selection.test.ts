@@ -110,3 +110,59 @@ describe("model curve overlay", () => {
     chart.destroy();
   });
 });
+
+describe("dense motion trace + layering", () => {
+  const base = {
+    series: { t: [] as number[], x: [] as number[] },
+    motionTrace: { x: [0, 1, 2, 3, 4], y: [1, 1.2, 1.9, 2.4, 3.1] },
+    markers: [
+      { t: 0, x: 1 },
+      { t: 2, x: 2 },
+      { t: 4, x: 3 },
+    ],
+    markerRadius: 6,
+    functionOverlay: (x: number) => 0.5 * x + 1,
+    xLabel: "Classroom x",
+    yLabel: "Classroom y",
+    xDomain: [0, 4] as [number, number],
+    yDomain: [0, 4] as [number, number],
+  };
+
+  it("renders motion trace, points, and model as separate elements", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const chart = mountChart(host);
+    chart.update(base);
+    expect(host.querySelector(".motion-trace")).not.toBeNull();
+    expect(host.querySelectorAll(".marker")).toHaveLength(3);
+    expect(host.querySelector(".model-curve")).not.toBeNull();
+    // markers are bigger than the default
+    expect(Number((host.querySelector(".marker") as SVGCircleElement).getAttribute("r"))).toBe(6);
+    chart.destroy();
+  });
+
+  it("render order is motion -> model -> points (points last / on top)", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const chart = mountChart(host);
+    chart.update(base);
+    const clip = host.querySelector("g[clip-path]")!;
+    const kids = [...clip.children].map((n) => n.getAttribute("class") ?? n.tagName);
+    const iMotion = kids.findIndex((c) => c.includes("motion-trace"));
+    const iModel = kids.findIndex((c) => c.includes("model-curve"));
+    const iMarker = kids.findIndex((c) => c.includes("marker"));
+    expect(iMotion).toBeGreaterThanOrEqual(0);
+    expect(iMotion).toBeLessThan(iModel);
+    expect(iModel).toBeLessThan(iMarker);
+    chart.destroy();
+  });
+
+  it("no motionTrace given -> no .motion-trace element (Live Lab / Walk unaffected)", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const chart = mountChart(host);
+    chart.update({ series: { t: [0, 1], x: [1, 2] }, xLabel: "t", yLabel: "x", xDomain: "auto-grow", yDomain: "auto" });
+    expect(host.querySelector(".motion-trace")).toBeNull();
+    chart.destroy();
+  });
+});

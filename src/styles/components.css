@@ -197,6 +197,17 @@
   fill: none;
   stroke: var(--accent);
   stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+  stroke-linecap: round;
+}
+/* Snapshot Lab: the dense classroom motion trace — behind, softly weighted */
+.chart-svg .motion-trace {
+  fill: none;
+  stroke: var(--ink-dim);
+  stroke-width: 2;
+  stroke-opacity: 0.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 .chart-svg .sel-handle {
   stroke: var(--accent);
@@ -204,7 +215,7 @@
 .chart-svg .marker {
   fill: var(--trace);
   stroke: var(--surface);
-  stroke-width: 1;
+  stroke-width: 1.5;
 }
 
 .dev-link {
@@ -354,6 +365,34 @@
   flex-wrap: wrap;
   gap: var(--s-2);
   align-items: center;
+}
+.snapshot-legend {
+  display: flex;
+  gap: var(--s-4);
+  font-size: var(--type-label);
+  color: var(--ink-dim);
+}
+.snapshot-legend__item::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.snapshot-legend__motion::before {
+  border-top: 2px solid var(--ink-dim);
+}
+.snapshot-legend__points::before {
+  border-top: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--trace);
+  margin-bottom: -1px;
+}
+.snapshot-legend__model::before {
+  border-top: 2px dashed var(--accent);
 }
 .snapshot-step {
   display: inline-flex;

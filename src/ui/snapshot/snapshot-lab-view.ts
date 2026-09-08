@@ -88,6 +88,7 @@ export function mountSnapshotLabView(host: HTMLElement, deps: SnapshotLabDeps): 
     const modeName = el("span", { className: "snapshot-mode__name" });
     const modeCopy = el("span", { className: "snapshot-mode__copy" });
     const chartHost = el("div", { className: "chart-host" });
+    const legendSlot = el("div", { className: "snapshot-legend" });
     const controls = el("div", { className: "snapshot-controls" });
     const modelRow = el("div", { className: "snapshot-model" });
     const equationSlot = el("div", { className: "snapshot-equation" });
@@ -105,6 +106,7 @@ export function mountSnapshotLabView(host: HTMLElement, deps: SnapshotLabDeps): 
           modeCopy,
         ),
         chartHost,
+        legendSlot,
         controls,
         modelRow,
         equationSlot,
@@ -130,6 +132,7 @@ export function mountSnapshotLabView(host: HTMLElement, deps: SnapshotLabDeps): 
 
     function drawChart(): void {
       if (ws.mode === "raw") {
+        legendSlot.replaceChildren();
         chart.update({
           series: {
             t: ws.run.samples.map((s) => s.timestampSeconds),
@@ -157,7 +160,12 @@ export function mountSnapshotLabView(host: HTMLElement, deps: SnapshotLabDeps): 
       const fit = ws.fit && !isFitFailure(ws.fit) ? ws.fit : null;
       chart.update({
         series: { t: [], x: [] },
+        motionTrace: {
+          x: snap.tracePoints.map((p) => p.x),
+          y: snap.tracePoints.map((p) => p.y),
+        },
         markers: snap.points.map((p) => ({ t: p.x, x: p.y })),
+        markerRadius: 6,
         xLabel: "Classroom x",
         yLabel: "Classroom y",
         xDomain: d.x,
@@ -166,6 +174,17 @@ export function mountSnapshotLabView(host: HTMLElement, deps: SnapshotLabDeps): 
           ? { functionOverlay: (x: number) => predict(fit.family, fit.coefficients, x) }
           : {}),
       });
+      renderLegend(fit !== null);
+    }
+
+    function renderLegend(hasModel: boolean): void {
+      legendSlot.replaceChildren(
+        el("span", { className: "snapshot-legend__item snapshot-legend__motion", textContent: "Motion" }),
+        el("span", { className: "snapshot-legend__item snapshot-legend__points", textContent: "Points" }),
+        ...(hasModel
+          ? [el("span", { className: "snapshot-legend__item snapshot-legend__model", textContent: "Model" })]
+          : []),
+      );
     }
 
     function render(): void {
