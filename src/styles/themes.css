@@ -1,0 +1,97 @@
+/*
+ * Theme layer — token overrides only. `src/app/theme.ts` sets
+ * `data-theme` on <html>; every component keeps reading the same semantic
+ * tokens. Midnight is the base (defined in tokens.css); the others redefine the
+ * palette here. Never add layout or component rules to this file — tokens only,
+ * with the single exception of the Kusama ambient dot background, which is a
+ * pure decorative surface treatment kept well clear of the plot areas.
+ */
+
+/* ── Midnight (explicit, = the tokens.css base) ───────────────────────────── */
+:root[data-theme="midnight"] {
+  color-scheme: dark;
+}
+
+/* ── Daylight — a bright classroom / daytime projector palette ───────────── */
+:root[data-theme="daylight"] {
+  color-scheme: light;
+
+  --surface: #f5f6f8;
+  --surface-raised: #ffffff;
+  --surface-inset: #eceef2;
+  --border: #d3d8e0;
+  --ink: #1a1d23;
+  --ink-dim: #566070;
+  --ink-faint: #8a93a2;
+
+  --accent: #1f6fe5;
+  --accent-ink: #ffffff;
+  --trace: #0f9d6b;
+  --grid: #dfe3ea;
+
+  --ok: #1c9d63;
+  --warn: #b9761f;
+  --err: #cf4436;
+}
+
+/* ── Dusk — a violet twilight, between Midnight and Daylight ─────────────── */
+:root[data-theme="dusk"] {
+  color-scheme: dark;
+
+  --surface: #1a1626;
+  --surface-raised: #241f33;
+  --surface-inset: #140f1e;
+  --border: #382f4d;
+  --ink: #efeaf6;
+  --ink-dim: #b3a7c8;
+  --ink-faint: #7a6f90;
+
+  --accent: #c77dff;
+  --accent-ink: #17061f;
+  --trace: #ff9e64;
+  --grid: #2f2743;
+
+  --ok: #6fd39c;
+  --warn: #e6b566;
+  --err: #f0857a;
+}
+
+/* ── Kusama Dots — warm cream, Kusama red, a clean near-white plot area ──── */
+:root[data-theme="kusama"] {
+  color-scheme: light;
+
+  --surface: #f4ece0;
+  --surface-raised: #fbf6ee;
+  --surface-inset: #fffdf9; /* the chart plotting area — deliberately clean */
+  --border: #e0d3c0;
+  --ink: #241c17;
+  --ink-dim: #6b5d4f;
+  --ink-faint: #9a8b7a;
+
+  --accent: #d0342c;
+  --accent-ink: #fffdf9;
+  --trace: #1c1c1c;
+  --grid: #ece0cd;
+
+  --ok: #3f8f5c;
+  --warn: #b9761f;
+  --err: #d0342c;
+
+  --kusama-dot: rgb(208 52 44 / 0.09);
+  --kusama-dot-2: rgb(36 28 23 / 0.05);
+}
+
+/*
+ * Ambient polka-dot field. Painted on <body> only — every panel, row, table and
+ * the chart plot area has its own opaque surface, so the dots stay in the
+ * negative space and never touch a data trace, an axis label or a table cell.
+ */
+:root[data-theme="kusama"] body {
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(var(--kusama-dot) 2px, transparent 2.4px),
+    radial-gradient(var(--kusama-dot-2) 3px, transparent 3.4px);
+  background-size: 34px 34px, 34px 34px;
+  background-position: 0 0, 17px 17px;
+  background-attachment: fixed;
+}

@@ -9,6 +9,7 @@ import { RawReportRing } from "../dev/raw-report-ring.js";
 import { mountSensorDiagnosticsView } from "../dev/sensor-diagnostics-view.js";
 import { renderUnsupportedView } from "../dev/unsupported-view.js";
 import { readFlags, type Flags } from "./flags.js";
+import { initTheme } from "./theme.js";
 import { AppStore } from "./app-store.js";
 import { createRouter, type Location } from "./router.js";
 import { mountShell } from "../ui/shell.js";
@@ -47,6 +48,9 @@ export interface RunningApp {
 export async function startApp(opts: StartAppOptions): Promise<RunningApp> {
   const { container } = opts;
   const flags = opts.flagsOverride ?? readFlags();
+
+  // apply the persisted theme before the shell paints (token-only; no coupling)
+  initTheme();
 
   const hid = flags.fake ? null : (opts.hidOverride ?? getHid());
   if (!hid && !flags.fake && !opts.adapterOverride) {

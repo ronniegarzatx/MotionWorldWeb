@@ -35,6 +35,7 @@ hardware-verified in M0. Protocol diagnostics live behind `?debug=sensor`.
 | **Tools** | Live Lab · Data Display · Walk the Line · Snapshot Lab · Speed Lab |
 | **Utility** | Runs (`#/runs`) — saved collections |
 | **Coming next** | Sequence Lab |
+| **Themes** | Midnight (default) · Daylight · Dusk · Kusama Dots — header picker, persists locally, token-only |
 
 - **Milestone 1** — app shell, Home, Live Lab, Data Display, shared acquisition
   control, web-native dark-first design system.

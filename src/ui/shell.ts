@@ -2,6 +2,8 @@ import type { AcquisitionController } from "../acquisition/acquisition-controlle
 import type { Flags } from "../app/flags.js";
 import type { Location, Route } from "../app/router.js";
 import { mountAcquisitionBar } from "./acquisition-bar.js";
+import { mountThemePicker } from "./theme-picker.js";
+import { loadTheme } from "../app/theme.js";
 import { el } from "./components/dom.js";
 
 export interface ShellDeps {
@@ -38,6 +40,7 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
   });
 
   const barHost = el("span", { className: "acq-bar-host" });
+  const themeHost = el("span", { className: "theme-host" });
   const devLink = el("a", {
     className: "dev-link",
     href: "#/diagnostics",
@@ -52,6 +55,7 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
     el("span", { className: "spacer" }),
     barHost,
     runsLink,
+    themeHost,
     devLink,
   );
 
@@ -64,6 +68,8 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
     ...(deps.onShowDetails ? { onShowDetails: deps.onShowDetails } : {}),
   });
 
+  const teardownTheme = mountThemePicker(themeHost, { initial: loadTheme() });
+
   let teardownView: (() => void) | null = null;
 
   return {
@@ -75,6 +81,7 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
     teardown() {
       teardownView?.();
       teardownBar();
+      teardownTheme();
       container.replaceChildren();
     },
   };

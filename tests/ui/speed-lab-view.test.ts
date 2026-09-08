@@ -96,6 +96,23 @@ describe("speed-lab-view — a run", () => {
     expect(host.textContent).not.toMatch(/NaN|Infinity/);
   });
 
+  it("lays out graph → controls → result → presets, in that order", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    const lab = host.querySelector(".speed-lab")!;
+    const idx = [".chart-host", ".speed-controls", ".speed-result", ".speed-limits"].map((sel) =>
+      [...lab.children].findIndex((c) => c.matches(sel)),
+    );
+    expect(idx.every((i) => i >= 0)).toBe(true);
+    expect(idx).toEqual([...idx].sort((a, b) => a - b));
+    // the headline value sits above the smaller supporting lines
+    const result = host.querySelector(".speed-result")!;
+    const head = result.querySelector(".speed-result__head")!;
+    const value = result.querySelector(".speed-result__value")!;
+    const velocity = result.querySelector(".speed-result__velocity")!;
+    expect(head.compareDocumentPosition(value) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(value.compareDocumentPosition(velocity) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("draws one best-fit line, confined to the selection band", async () => {
     const { host } = await withRun(linearWalk("cur"));
     const curves = host.querySelectorAll(".model-curve");

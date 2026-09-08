@@ -113,7 +113,7 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
     host.replaceChildren(
       el(
         "div",
-        { className: "speed-lab" },
+        { className: "speed-lab speed-lab--collecting" },
         el("span", { className: "walk-head__title", textContent: "Speed Lab" }),
         el("p", {
           className: "speed-collecting",

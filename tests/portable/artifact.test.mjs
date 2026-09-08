@@ -67,6 +67,17 @@ describe("portable artifact (real build)", () => {
     expect(html).toContain("Speed Lab");
     expect(html).toContain("YOUR SPEED");
     expect(html).toMatch(/How was this speed calculated/);
+    expect(html).toMatch(/Δposition ÷ Δtime/); // the slope-calc hero string
+  });
+
+  it("bundles the theme system with no external assets", () => {
+    expect(html).toContain("Kusama Dots");
+    expect(html).toContain("Daylight");
+    expect(html).toMatch(/data-theme.{0,2}kusama/); // theme token layer inlined (quotes may be minified away)
+    expect(html).toContain("motion-world-theme"); // the localStorage key
+    // the Kusama dots are pure CSS gradients — no image request
+    expect(html).toMatch(/radial-gradient\([^)]*kusama-dot/);
+    expect(html).not.toMatch(/url\(\s*["']?https?:/i); // no remote image anywhere
   });
 
   it("applies the offline CSP", () => {

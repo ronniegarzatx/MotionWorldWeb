@@ -39,6 +39,19 @@ describe("speed-explainer-overlay", () => {
     expect(text.toLowerCase()).toContain("delta");
   });
 
+  it("makes the slope calculation the hero, above the OLS note", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    mountSpeedExplainerOverlay(host, baseInput());
+    const hero = host.querySelector(".speed-explain__hero")!;
+    expect(hero).not.toBeNull();
+    expect(hero.textContent).toMatch(/Δposition ÷ Δtime/);
+    expect(hero.querySelector(".speed-explain__hero-result")!.textContent).toMatch(/m\/s/);
+    // hero comes before the "what Motion World actually uses" section in the DOM
+    const ols = host.querySelector(".speed-explain__ols")!;
+    expect(hero.compareDocumentPosition(ols) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("shows the honest OLS explanation with m, r² and the sample count", () => {
     const host = document.createElement("div");
     document.body.append(host);

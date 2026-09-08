@@ -51,3 +51,46 @@ Manual (jsdom has no layout). Chrome/Edge, `?fake`. Resize / DevTools device too
 | date | browser | widths ok | issues |
 |---|---|---|---|
 | _pending first run_ | | | |
+
+---
+
+## Next pass — Speed Lab projector polish + theme system
+
+### Speed Lab layout
+- [ ] the position-vs-time graph is the **dominant** element (grid `1fr` row,
+      `min-height 340px` / `height 60vh`); order stays graph → controls →
+      result → speed-limit presets
+- [ ] **YOUR SPEED** (uppercase, `--type-h2`) and the mph value
+      (`--type-speed`, `clamp(3rem … 6.5rem)`) read from the back of the room
+- [ ] direction sits directly below the value at `--type-h1`
+- [ ] speed-limit line is `--type-body`; velocity + `r² · samples · duration`
+      provenance are `--type-label` faint — clear descending hierarchy
+- [ ] "Collecting…" state: graph fills, no result number until Stop
+
+### "How was this speed calculated?" modal
+- [ ] the slope calculation is the **hero**: `m = Δposition ÷ Δtime`
+      (`clamp(1.8rem … 3.4rem)`), then the substituted endpoint values, then the
+      simplified fraction / two-point slope in accent colour
+- [ ] below, smaller: "Motion World uses the best-fit slope of every sample in
+      the selected interval" — the honest OLS note, still projector-readable
+- [ ] "THE NUMBERS" block: best-fit velocity, speed `|m|`, mph conversion with
+      the `× 2.2369362920544` factor, direction, samples, r², intercept
+- [ ] the two-point *teaching estimate* and the OLS *calculation* stay clearly
+      distinct; when they disagree >10 % the modal says which one the result uses
+- [ ] never crops; Esc + backdrop close
+
+### Themes (Home · Live Lab · Data Display · Walk the Line · Runs · Snapshot · Speed)
+- [ ] header **Theme** `<select>`: Midnight (default) · Daylight · Dusk ·
+      Kusama Dots; choice persists across reloads (localStorage
+      `motion-world-theme`); applied as `data-theme` on `<html>` before paint
+- [ ] every view re-themes with no layout shift — tokens only, no per-view rules
+- [ ] **Daylight** — light surfaces, dark ink, green trace / blue accent; chart
+      grid + labels legible on the lighter inset
+- [ ] **Dusk** — violet twilight; warm-orange trace on the dark plot
+- [ ] **Kusama Dots** — warm cream page with a subtle two-layer red/ink
+      polka-dot field on `<body>` (`background-attachment: fixed`); the
+      **plot area, axis labels, tables, panels and result text all sit on their
+      own opaque surfaces** — dots never touch data. Kusama red accent, near-black
+      trace on a clean near-white plot. Artful, not noisy.
+- [ ] no external asset / font / CDN in any theme; portable `MotionWorld.html`
+      offers all four themes offline

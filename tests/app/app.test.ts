@@ -44,6 +44,23 @@ describe("startApp", () => {
     expect([...container.querySelectorAll(".header-link")].map((l) => l.textContent)).toContain("Runs");
   });
 
+  it("the shell carries a theme picker that applies the choice to <html>", async () => {
+    const { container } = await boot();
+    const select = container.querySelector(".theme-select") as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    expect([...select.options].map((o) => o.value)).toEqual([
+      "midnight",
+      "daylight",
+      "dusk",
+      "kusama",
+    ]);
+    expect(document.documentElement.dataset.theme).toBe("midnight"); // initTheme ran on boot
+    select.value = "kusama";
+    select.dispatchEvent(new Event("change"));
+    expect(document.documentElement.dataset.theme).toBe("kusama");
+    delete document.documentElement.dataset.theme;
+  });
+
   it("Diagnostics link hidden without a debug/fake flag; shown with one", async () => {
     const plain = await boot({ fake: false, debugSensor: false });
     expect((plain.container.querySelector(".dev-link") as HTMLElement).hidden).toBe(true);
