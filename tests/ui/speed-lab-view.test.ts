@@ -82,35 +82,45 @@ describe("speed-lab-view — no run", () => {
   });
 });
 
+const follows = (a: Element, b: Element): boolean =>
+  Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
 describe("speed-lab-view — a run", () => {
-  it("shows the headline speed, direction, limit line, velocity and provenance", async () => {
+  it("main screen shows only YOUR SPEED, the mph value and the direction", async () => {
     const { host } = await withRun(linearWalk("cur"));
     expect(host.querySelector(".speed-result__head")!.textContent).toMatch(/YOUR SPEED/i);
-    const big = host.querySelector(".speed-result__value")!.textContent!;
-    expect(big).toMatch(/mph/);
-    expect(host.textContent).toMatch(/Away from (the )?sensor/i);
-    expect(host.textContent).toMatch(/5 mph limit/);
-    expect(host.textContent).toMatch(/Velocity:\s*\+?0\.50 m\/s/);
-    expect(host.textContent).toMatch(/r² = /);
-    expect(host.textContent).toMatch(/samples/);
+    expect(host.querySelector(".speed-result__value")!.textContent).toMatch(/mph/);
+    expect(host.querySelector(".speed-result__direction")!.textContent).toMatch(/Away from (the )?sensor/i);
+    // the supporting detail has moved into the modal — not on the main screen
+    expect(host.querySelector(".speed-result__velocity")).toBeNull();
+    expect(host.querySelector(".speed-result__provenance")).toBeNull();
+    expect(host.querySelector(".speed-result__limit")).toBeNull();
+    expect(host.textContent).not.toMatch(/Velocity:/);
+    expect(host.textContent).not.toMatch(/r² = /);
+    expect(host.textContent).not.toMatch(/\bsamples\b/);
+    expect(host.textContent).not.toMatch(/mph limit/);
     expect(host.textContent).not.toMatch(/NaN|Infinity/);
   });
 
-  it("lays out graph → controls → result → presets, in that order", async () => {
+  it("puts the speed result above the graph, then interval controls, then the bottom row", async () => {
     const { host } = await withRun(linearWalk("cur"));
-    const lab = host.querySelector(".speed-lab")!;
-    const idx = [".chart-host", ".speed-controls", ".speed-result", ".speed-limits"].map((sel) =>
-      [...lab.children].findIndex((c) => c.matches(sel)),
-    );
-    expect(idx.every((i) => i >= 0)).toBe(true);
-    expect(idx).toEqual([...idx].sort((a, b) => a - b));
-    // the headline value sits above the smaller supporting lines
     const result = host.querySelector(".speed-result")!;
-    const head = result.querySelector(".speed-result__head")!;
-    const value = result.querySelector(".speed-result__value")!;
-    const velocity = result.querySelector(".speed-result__velocity")!;
-    expect(head.compareDocumentPosition(value) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(value.compareDocumentPosition(velocity) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const chart = host.querySelector(".chart-host")!;
+    const controls = host.querySelector(".speed-controls")!;
+    const limits = host.querySelector(".speed-limits")!;
+    const calc = btn(host, "How was this speed calculated?");
+    expect(follows(result, chart)).toBe(true);
+    expect(follows(chart, controls)).toBe(true);
+    expect(follows(controls, limits)).toBe(true);
+    // speed-limit presets and the calculation button share the bottom row
+    expect(host.querySelector(".speed-lab__bottom")!.contains(limits)).toBe(true);
+    expect(host.querySelector(".speed-lab__bottom")!.contains(calc)).toBe(true);
+  });
+
+  it("keeps the speed-limit presets and the calculation button visible on the main screen", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    for (const mph of [2, 5, 10]) expect(btn(host, `${mph} mph`)).toBeTruthy();
+    expect(btn(host, "How was this speed calculated?")).toBeTruthy();
   });
 
   it("draws one best-fit line, confined to the selection band", async () => {
@@ -126,14 +136,15 @@ describe("speed-lab-view — a run", () => {
     expect(Math.max(...xs)).toBeLessThanOrEqual(bx + bw + 1);
   });
 
-  it("speed-limit presets: 5 selected by default; picking 2 mph flips the standing", async () => {
+  it("speed-limit presets: 5 selected by default; picking 2 mph moves the selection", async () => {
     const { host } = await withRun(linearWalk("cur")); // ~1.12 mph
-    const five = btn(host, "5 mph");
-    expect(five.getAttribute("aria-pressed")).toBe("true");
-    expect(host.textContent).toMatch(/under the 5 mph limit/);
+    expect(btn(host, "5 mph").getAttribute("aria-pressed")).toBe("true");
     btn(host, "2 mph").click();
-    expect(host.textContent).toMatch(/under the 2 mph limit/);
     expect(btn(host, "2 mph").getAttribute("aria-pressed")).toBe("true");
+    expect(btn(host, "5 mph").getAttribute("aria-pressed")).toBe("false");
+    // the chosen limit surfaces in the calculation modal
+    btn(host, "How was this speed calculated?").click();
+    expect(host.textContent).toMatch(/2 mph limit/);
   });
 
   it("editing the selection recomputes the headline speed", async () => {
@@ -148,13 +159,32 @@ describe("speed-lab-view — a run", () => {
     expect(host.querySelector(".speed-result__value")!.textContent).not.toBe(before);
   });
 
-  it("opens and closes the calculation overlay", async () => {
+  it("opens the calculation overlay with all the moved supporting detail, then closes", async () => {
     const { host } = await withRun(linearWalk("cur"));
     btn(host, "How was this speed calculated?").click();
-    expect(host.querySelector(".show-large")).not.toBeNull();
-    expect(host.textContent).toMatch(/best[- ]fit/i);
+    const modal = host.querySelector(".show-large")!;
+    expect(modal).not.toBeNull();
+    expect(modal.textContent).toMatch(/best[- ]fit/i); // OLS explanation
+    expect(modal.textContent).toMatch(/r² = /); // r²
+    expect(modal.textContent).toMatch(/\bsamples\b/); // sample count
+    expect(modal.textContent).toMatch(/m\/s/); // signed velocity
+    expect(modal.textContent).toMatch(/mph limit/); // speed-limit comparison
+    expect(modal.querySelector(".speed-explain__hero")).not.toBeNull();
+    // slope formula (hero) comes before the OLS explanation
+    const hero = modal.querySelector(".speed-explain__hero")!;
+    const ols = modal.querySelector(".speed-explain__ols")!;
+    expect(follows(hero, ols)).toBe(true);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(host.querySelector(".show-large")).toBeNull();
+  });
+
+  it("the calculation modal handles a too-short interval (endpoint slope omitted)", async () => {
+    // a run where the full window works but a pinched interval can't do two points
+    const { host } = await withRun(linearWalk("cur"));
+    btn(host, "How was this speed calculated?").click();
+    // baseline: two-point section present for the full window
+    expect(host.querySelector(".speed-explain__twopoint")).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
   });
 
   it("a saved run renders offline and is never written back", async () => {

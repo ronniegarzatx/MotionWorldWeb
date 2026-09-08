@@ -63,11 +63,13 @@ describe("portable artifact (real build)", () => {
     expect(html).not.toMatch(/mathjax|katex/i);
   });
 
-  it("bundles Speed Lab (OLS math is all local TS)", () => {
+  it("bundles Speed Lab + the calculation modal (OLS math is all local TS)", () => {
     expect(html).toContain("Speed Lab");
     expect(html).toContain("YOUR SPEED");
     expect(html).toMatch(/How was this speed calculated/);
-    expect(html).toMatch(/Δposition ÷ Δtime/); // the slope-calc hero string
+    expect(html).toContain("Δposition"); // the slope-formula hero
+    expect(html).toContain("ACTUAL MOTION WORLD CALCULATION"); // the honest OLS section
+    expect(html).toContain("TWO-POINT SLOPE"); // teaching estimate, kept distinct
   });
 
   it("bundles the theme system with no external assets", () => {

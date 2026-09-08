@@ -26,18 +26,36 @@ export interface SpeedExplainerInput {
   readonly speedMetersPerSecond: number;
   readonly speedMilesPerHour: number;
   readonly direction: MotionDirection;
+  /** e.g. "0.4 mph under the 5 mph limit" — null when the analysis failed */
+  readonly limitLine: string | null;
+  readonly intervalSeconds: number;
   readonly onClose: () => void;
 }
 
 const s = (v: number): string => v.toFixed(2);
 const r2 = (v: number): string => Math.max(0, v).toFixed(2);
 const signed = (v: number): string => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
+const signed1 = (v: number): string => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
 
 const DIRECTION_PHRASE: Record<MotionDirection, string> = {
   away: "away from the sensor",
   toward: "toward the sensor",
   stationary: "not moving",
 };
+
+/** A visual fraction: numerator over a rule over denominator. */
+function frac(numerator: string, denominator: string): HTMLElement {
+  return el(
+    "span",
+    { className: "frac" },
+    el("span", { className: "frac__num", textContent: numerator }),
+    el("span", { className: "frac__den", textContent: denominator }),
+  );
+}
+
+function equation(...parts: (Node | string)[]): HTMLElement {
+  return el("div", { className: "speed-explain__eq" }, ...parts);
+}
 
 function detailRow(label: string, value: string): HTMLElement {
   return el(
@@ -49,39 +67,61 @@ function detailRow(label: string, value: string): HTMLElement {
 }
 
 /**
- * "How was this speed calculated?" — a projector-focused teaching overlay,
- * reusing the Snapshot Show-Large CSS shell. The slope calculation is the visual
- * hero; the honest note that Motion World actually uses the OLS best-fit slope
- * of every sample, and the supporting numbers, sit below it in smaller type.
- * All arithmetic already happened in the model; this only formats.
+ * "How was this speed calculated?" — the single place for every detail. The
+ * slope formula is the visual hero: `m = Δposition / Δtime` as a real fraction,
+ * then the selected interval's endpoint values substituted in, then the computed
+ * two-point slope. Below that, in smaller type: the Δ explanation, then Motion
+ * World's ACTUAL best-fit (OLS) calculation with all the supporting numbers, and
+ * the honest reminder that the two-point slope is only an intuitive check.
+ * All arithmetic happened in the model; this only formats.
  */
 export function mountSpeedExplainerOverlay(host: HTMLElement, input: SpeedExplainerInput): () => void {
   const e = input.endpoint;
   const o = input.ols;
-
   const sections: Node[] = [];
 
-  // ── HERO — the slope calculation, largest type ─────────────────────────────
+  // ── HERO — the slope calculation, largest type ───────────────────────────
   if (e) {
     sections.push(
       el(
         "div",
         { className: "speed-explain__twopoint speed-explain__hero" },
-        el("div", { className: "speed-explain__hero-formula", textContent: "m  =  Δposition ÷ Δtime" }),
+        equation(
+          el("span", { textContent: "m" }),
+          el("span", { textContent: "=" }),
+          frac("Δposition", "Δtime"),
+        ),
+        equation(
+          el("span", { textContent: "m" }),
+          el("span", { textContent: "=" }),
+          frac(
+            `${s(e.endMeters)} m − ${s(e.startMeters)} m`,
+            `${s(e.endSeconds)} s − ${s(e.startSeconds)} s`,
+          ),
+        ),
+        equation(
+          el("span", { textContent: "m" }),
+          el("span", { textContent: "=" }),
+          frac(`${s(e.deltaMeters)} m`, `${s(e.deltaSeconds)} s`),
+        ),
         el("div", {
-          className: "speed-explain__hero-sub",
-          textContent:
-            `( ${s(e.endMeters)} m − ${s(e.startMeters)} m )  ÷  ` +
-            `( ${s(e.endSeconds)} s − ${s(e.startSeconds)} s )`,
+          className: "speed-explain__slope",
+          textContent: `TWO-POINT SLOPE ≈ ${signed1(e.slopeMetersPerSecond)} m/s`,
         }),
-        el("div", {
-          className: "speed-explain__hero-result",
-          textContent:
-            `=  ${s(e.deltaMeters)} m ÷ ${s(e.deltaSeconds)} s  =  ${s(e.slopeMetersPerSecond)} m/s`,
-        }),
+      ),
+    );
+
+    // ── Δ explanation — subordinate ───────────────────────────────────────
+    sections.push(
+      el(
+        "div",
+        { className: "speed-explain__delta" },
+        el("div", { className: "speed-explain__sub", textContent: "Δ (delta) means “the change in”." }),
+        el("div", { className: "speed-explain__sub", textContent: "Δposition = final − initial" }),
+        el("div", { className: "speed-explain__sub", textContent: "Δtime = final − initial" }),
         el("div", {
           className: "speed-explain__sub",
-          textContent: "Δ (delta) means “the change in” — the end value minus the start value.",
+          textContent: "On a position-vs-time graph, slope = velocity.",
         }),
       ),
     );
@@ -90,10 +130,10 @@ export function mountSpeedExplainerOverlay(host: HTMLElement, input: SpeedExplai
       el(
         "div",
         { className: "speed-explain__hero" },
-        el("div", { className: "speed-explain__hero-formula", textContent: "m  =  best-fit slope" }),
+        equation(el("span", { textContent: "m" }), el("span", { textContent: "= best-fit slope" })),
         el("div", {
-          className: "speed-explain__hero-result",
-          textContent: `=  ${s(o.slopeMetersPerSecond)} m/s`,
+          className: "speed-explain__slope",
+          textContent: `≈ ${s(o.slopeMetersPerSecond)} m/s`,
         }),
         el("div", {
           className: "speed-explain__sub",
@@ -103,52 +143,68 @@ export function mountSpeedExplainerOverlay(host: HTMLElement, input: SpeedExplai
     );
   }
 
-  // ── the honest note ───────────────────────────────────────────────────────
+  // ── ACTUAL Motion World calculation (OLS) ────────────────────────────────
+  sections.push(
+    el(
+      "div",
+      { className: "speed-explain__ols" },
+      el("div", { className: "show-large__label", textContent: "ACTUAL MOTION WORLD CALCULATION" }),
+      el("div", {
+        className: "speed-explain__sub",
+        textContent:
+          "Motion World uses the best-fit slope of every sample in the selected " +
+          `interval — the least-squares straight line through all ${o.sampleCount} points at once.`,
+      }),
+      el("div", {
+        className: "speed-explain__sub",
+        textContent:
+          `best-fit slope m = ${s(o.slopeMetersPerSecond)} m/s   ·   ` +
+          `r² = ${r2(o.rSquared)}   ·   ${o.sampleCount} samples over ${s(input.intervalSeconds)} s`,
+      }),
+      detailRow("Best-fit velocity", `${signed(o.slopeMetersPerSecond)} m/s`),
+      detailRow(
+        "Speed",
+        `| ${signed(o.slopeMetersPerSecond)} | = ${s(input.speedMetersPerSecond)} m/s`,
+      ),
+      detailRow(
+        "Convert",
+        `${s(input.speedMetersPerSecond)} × ${MPH_PER_MPS} ≈ ${input.speedMilesPerHour.toFixed(1)} mph`,
+      ),
+      detailRow("Direction", DIRECTION_PHRASE[input.direction]),
+      ...(input.limitLine ? [detailRow("Speed limit", input.limitLine)] : []),
+      detailRow("Interval", `${s(input.intervalSeconds)} s`),
+      detailRow("Intercept", `b = ${s(o.interceptMeters)} m`),
+    ),
+  );
+
+  // ── honesty: teaching check vs actual calculation ────────────────────────
   const disagree =
     e !== null &&
     Math.abs(o.slopeMetersPerSecond - e.slopeMetersPerSecond) >
       0.1 * Math.max(1e-9, Math.abs(o.slopeMetersPerSecond));
 
-  sections.push(
-    el(
-      "div",
-      { className: "speed-explain__ols" },
-      el("div", { className: "show-large__label", textContent: "WHAT MOTION WORLD ACTUALLY USES" }),
+  const honesty = el(
+    "div",
+    { className: "speed-explain__honesty" },
+    el("div", {
+      className: "speed-explain__sub",
+      textContent:
+        "The two-point slope is an intuitive check. The best-fit slope is Motion " +
+        "World’s actual calculation — it is the number on the result.",
+    }),
+  );
+  if (disagree && e) {
+    honesty.append(
       el("div", {
-        className: "speed-explain__sub",
+        className: "speed-explain__callout",
         textContent:
-          "Two points can be noisy. Motion World uses the best-fit slope of every " +
-          `sample in the selected interval — the least-squares straight line through all ` +
-          `${o.sampleCount} points at once.`,
+          `The two-point slope (≈ ${signed1(e.slopeMetersPerSecond)} m/s) and the best-fit ` +
+          `slope (${s(o.slopeMetersPerSecond)} m/s) differ by more than 10%. ` +
+          "The result uses the best-fit slope.",
       }),
-      disagree
-        ? el("div", {
-            className: "speed-explain__sub",
-            textContent:
-              `Best-fit slope: ${s(o.slopeMetersPerSecond)} m/s — the number on the result ` +
-              `(the two-point estimate above is only the teaching idea).`,
-          })
-        : null,
-    ),
-  );
-
-  // ── supporting numbers ───────────────────────────────────────────────────
-  sections.push(
-    el(
-      "div",
-      { className: "speed-explain__details" },
-      el("div", { className: "show-large__label", textContent: "THE NUMBERS" }),
-      detailRow("best-fit velocity", `${signed(o.slopeMetersPerSecond)} m/s`),
-      detailRow("speed = | m |", `${s(input.speedMetersPerSecond)} m/s`),
-      detailRow(
-        "mph",
-        `${s(input.speedMetersPerSecond)} × ${MPH_PER_MPS} = ${input.speedMilesPerHour.toFixed(1)} mph`,
-      ),
-      detailRow("direction", DIRECTION_PHRASE[input.direction]),
-      detailRow("samples", String(o.sampleCount)),
-      detailRow("r² = " + r2(o.rSquared), `intercept b = ${s(o.interceptMeters)} m`),
-    ),
-  );
+    );
+  }
+  sections.push(honesty);
 
   const closeBtn = el("button", { className: "btn", textContent: "Close" });
   closeBtn.addEventListener("click", input.onClose);

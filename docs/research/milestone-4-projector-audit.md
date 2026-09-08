@@ -94,3 +94,40 @@ Manual (jsdom has no layout). Chrome/Edge, `?fake`. Resize / DevTools device too
       trace on a clean near-white plot. Artful, not noisy.
 - [ ] no external asset / font / CDN in any theme; portable `MotionWorld.html`
       offers all four themes offline
+
+---
+
+## Final UI polish — spare projector layout
+
+### Main screen
+- [ ] top row: **Speed Lab** + one-line instruction on the left, **YOUR SPEED /
+      big mph value / direction** on the right; the result block has a stable
+      min-width so a changing value / direction never reflows the row
+- [ ] the result block is **above** the graph, never below it
+- [ ] the graph is the dominant object (`1fr` row, `min-height 340px` /
+      `height 62vh`), full practical width; not shrunk to fit text
+- [ ] interval controls (`Use all` · `Start − v +` · `End − v +`) directly under
+      the graph, behaviour unchanged
+- [ ] bottom row: `SPEED LIMIT [2][5][10]` on the left, one prominent
+      **HOW WAS THIS SPEED CALCULATED?** button on the right; wraps cleanly at
+      narrow widths, neither group clips
+- [ ] the main screen shows **nothing else** — no under/over sentence, no signed
+      velocity, no r², no sample count, no interval duration, no intercept
+
+### Calculation modal (the single place for all detail)
+- [ ] hero = the slope formula as a **real fraction**: `m = Δposition / Δtime`,
+      then the interval's endpoint values substituted into a fraction, then
+      `m = Δpos / Δtime` numerically, then `TWO-POINT SLOPE ≈ ±v m/s` — large,
+      readable across a classroom; the modal scrolls (`max-height: 92vh`) rather
+      than shrinking the formula
+- [ ] Δ explanation below it, subordinate: Δ = "change in", `final − initial`,
+      "slope = velocity"
+- [ ] **ACTUAL MOTION WORLD CALCULATION** section: best-fit velocity, speed
+      `|v|`, mph conversion with `× 2.2369362920544`, direction, speed-limit
+      comparison, interval, intercept, and a `m · r² · N samples` summary line
+- [ ] honesty line always present — "two-point slope = intuitive check /
+      best-fit slope = actual calculation"; when the two differ >10% an amber
+      callout names both and says the result uses the best-fit slope
+- [ ] too-short interval: the two-point hero is replaced by the best-fit slope;
+      the calculation section still renders
+- [ ] no clipped math at any width; Esc / backdrop close

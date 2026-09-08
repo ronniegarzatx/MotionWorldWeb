@@ -153,6 +153,7 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
     const controls = el("div", { className: "speed-controls" });
     const resultSlot = el("div", { className: "speed-result" });
     const limitsSlot = el("div", { className: "speed-limits" });
+    const explainSlot = el("div", { className: "speed-lab__explain" });
 
     host.replaceChildren(
       el(
@@ -160,17 +161,21 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
         { className: "speed-lab" },
         el(
           "div",
-          { className: "snapshot-mode" },
-          el("span", { className: "walk-head__title", textContent: "Speed Lab" }),
-          el("span", {
-            className: "snapshot-mode__copy",
-            textContent: "Position vs. time. Drag the shaded band to choose the interval to measure.",
-          }),
+          { className: "speed-lab__top" },
+          el(
+            "div",
+            { className: "speed-lab__intro" },
+            el("span", { className: "walk-head__title", textContent: "Speed Lab" }),
+            el("span", {
+              className: "snapshot-mode__copy",
+              textContent: "Position vs. time — drag the shaded band to choose the interval to measure.",
+            }),
+          ),
+          resultSlot,
         ),
         chartHost,
         controls,
-        resultSlot,
-        limitsSlot,
+        el("div", { className: "speed-lab__bottom" }, limitsSlot, explainSlot),
       ),
     );
 
@@ -230,44 +235,44 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
         resultSlot.append(el("p", { className: "speed-result__reason", textContent: a.reason }));
         return;
       }
-      const sign = a.slopeMetersPerSecond >= 0 ? "+" : "−";
       resultSlot.append(
         el("p", { className: "speed-result__value", textContent: `${a.speedMilesPerHour.toFixed(1)} mph` }),
         el("p", { className: "speed-result__direction", textContent: DIRECTION_PHRASE[a.direction] }),
-        ...(ws.comparison
-          ? [el("p", { className: "speed-result__limit", textContent: limitLine(ws.comparison) })]
-          : []),
-        el("p", {
-          className: "speed-result__velocity",
-          textContent: `Velocity: ${sign}${Math.abs(a.speedMetersPerSecond).toFixed(2)} m/s`,
-        }),
-        el("p", {
-          className: "speed-result__provenance",
-          textContent:
-            `best-fit r² = ${Math.max(0, a.rSquared).toFixed(2)} · ` +
-            `${a.sampleCount} samples over ${windowDurationSeconds(ws.window).toFixed(2)} s`,
-        }),
+      );
+    }
+
+    function openExplainer(): void {
+      const a = ws.analysis;
+      if (!a.ok) return;
+      overlayTeardown?.();
+      overlayTeardown = mountSpeedExplainerOverlay(host, {
+        endpoint: ws.endpoint,
+        ols: {
+          slopeMetersPerSecond: a.slopeMetersPerSecond,
+          interceptMeters: a.interceptMeters,
+          rSquared: a.rSquared,
+          sampleCount: a.sampleCount,
+        },
+        speedMetersPerSecond: a.speedMetersPerSecond,
+        speedMilesPerHour: a.speedMilesPerHour,
+        direction: a.direction,
+        limitLine: ws.comparison ? limitLine(ws.comparison) : null,
+        intervalSeconds: windowDurationSeconds(ws.window),
+        onClose: () => {
+          overlayTeardown?.();
+          overlayTeardown = null;
+        },
+      });
+    }
+
+    function renderExplain(): void {
+      explainSlot.replaceChildren();
+      if (!ws.analysis.ok) return;
+      explainSlot.append(
         button({
           label: "How was this speed calculated?",
-          onClick: () => {
-            overlayTeardown?.();
-            overlayTeardown = mountSpeedExplainerOverlay(host, {
-              endpoint: ws.endpoint,
-              ols: {
-                slopeMetersPerSecond: a.slopeMetersPerSecond,
-                interceptMeters: a.interceptMeters,
-                rSquared: a.rSquared,
-                sampleCount: a.sampleCount,
-              },
-              speedMetersPerSecond: a.speedMetersPerSecond,
-              speedMilesPerHour: a.speedMilesPerHour,
-              direction: a.direction,
-              onClose: () => {
-                overlayTeardown?.();
-                overlayTeardown = null;
-              },
-            });
-          },
+          variant: "primary",
+          onClick: openExplainer,
         }),
       );
     }
@@ -286,6 +291,7 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
       renderControls();
       renderResult();
       renderLimits();
+      renderExplain();
       drawChart();
     }
 
