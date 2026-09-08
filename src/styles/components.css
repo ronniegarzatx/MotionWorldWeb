@@ -355,6 +355,16 @@
   gap: var(--s-2);
   align-items: center;
 }
+.snapshot-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+.snapshot-step .btn {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+}
 .snapshot-selected {
   font-variant-numeric: tabular-nums;
   color: var(--ink-dim);
