@@ -110,4 +110,35 @@ describe("mountChart", () => {
     expect(host.querySelector(".selection-band")).not.toBeNull();
     chart.destroy();
   });
+
+  it("renders muted markers and a second (alt) marker set", () => {
+    const host = document.createElement("div");
+    Object.defineProperty(host, "clientWidth", { value: 800 });
+    Object.defineProperty(host, "clientHeight", { value: 450 });
+    document.body.append(host);
+    const chart = mountChart(host);
+    chart.update({
+      series: series([0, 10], [0, 1]),
+      xLabel: "n",
+      yLabel: "y",
+      xDomain: [0, 10],
+      yDomain: [0, 1],
+      markerRadius: 6,
+      markers: [
+        { t: 1, x: 0.2 },
+        { t: 2, x: 0.4, muted: true },
+      ],
+      markersAlt: [{ t: 3, x: 0.6 }],
+    });
+    expect(host.querySelectorAll(".marker")).toHaveLength(3); // all circles carry .marker
+    expect(host.querySelectorAll(".marker--muted")).toHaveLength(1);
+    expect(host.querySelectorAll(".marker--alt")).toHaveLength(1);
+    const muted = host.querySelector(".marker--muted") as SVGCircleElement;
+    expect(Number(muted.getAttribute("r"))).toBeLessThan(6); // smaller
+    const plain = [...host.querySelectorAll(".marker")].find(
+      (m) => !m.classList.contains("marker--muted") && !m.classList.contains("marker--alt"),
+    ) as SVGCircleElement;
+    expect(Number(plain.getAttribute("r"))).toBe(6);
+    chart.destroy();
+  });
 });

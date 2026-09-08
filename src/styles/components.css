@@ -217,6 +217,14 @@
   stroke: var(--surface);
   stroke-width: 1.5;
 }
+.chart-svg .marker--alt {
+  fill: var(--accent);
+}
+.chart-svg .marker--muted {
+  fill: var(--ink-faint);
+  fill-opacity: 0.45;
+  stroke: none;
+}
 
 .theme-host {
   display: inline-flex;

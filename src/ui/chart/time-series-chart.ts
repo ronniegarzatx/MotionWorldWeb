@@ -21,7 +21,10 @@ export interface ChartInput {
   readonly xLabel: string;
   readonly yLabel: string;
   readonly overlays?: readonly { readonly d: string; readonly kind: "model" }[];
-  readonly markers?: readonly { readonly t: number; readonly x: number }[];
+  /** `muted` markers render subdued + smaller (Sequence Lab's excluded terms). */
+  readonly markers?: readonly { readonly t: number; readonly x: number; readonly muted?: boolean }[];
+  /** A second, visually distinct marker set (Sequence Lab's pendulum minima). */
+  readonly markersAlt?: readonly { readonly t: number; readonly x: number; readonly muted?: boolean }[];
   readonly selection?: {
     readonly startT: number;
     readonly endT: number;
@@ -382,9 +385,23 @@ export function mountChart(host: HTMLElement): ChartHandle {
 
     // sampled POINTS — on top, highest local contrast
     const markerR = input.markerRadius ?? 3;
-    for (const m of input.markers ?? []) {
-      gClip.appendChild(svg("circle", { class: "marker", cx: xScale(m.t), cy: yScale(m.x), r: markerR }));
-    }
+    const paintMarkers = (
+      set: readonly { readonly t: number; readonly x: number; readonly muted?: boolean }[] | undefined,
+      cls: string,
+    ): void => {
+      for (const m of set ?? []) {
+        gClip.appendChild(
+          svg("circle", {
+            class: m.muted ? `${cls} marker--muted` : cls,
+            cx: xScale(m.t),
+            cy: yScale(m.x),
+            r: m.muted ? markerR * 0.7 : markerR,
+          }),
+        );
+      }
+    };
+    paintMarkers(input.markersAlt, "marker marker--alt");
+    paintMarkers(input.markers, "marker");
   };
 
   // ── editable selection drag ─────────────────────────────────────────────
