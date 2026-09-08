@@ -691,6 +691,18 @@
   gap: var(--s-2);
   align-items: center;
 }
+.speed-controls__zoom {
+  margin-left: auto;
+}
+.speed-controls__zoom[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+@media (max-width: 720px) {
+  .speed-controls__zoom {
+    margin-left: 0;
+  }
+}
 
 .speed-lab__bottom {
   display: flex;

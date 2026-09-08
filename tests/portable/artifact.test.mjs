@@ -70,6 +70,7 @@ describe("portable artifact (real build)", () => {
     expect(html).toContain("Δposition"); // the slope-formula hero
     expect(html).toContain("ACTUAL MOTION WORLD CALCULATION"); // the honest OLS section
     expect(html).toContain("TWO-POINT SLOPE"); // teaching estimate, kept distinct
+    expect(html).toContain("Zoom to window"); // graph-only window zoom
   });
 
   it("bundles the theme system with no external assets", () => {

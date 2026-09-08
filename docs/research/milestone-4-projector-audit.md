@@ -131,3 +131,45 @@ Manual (jsdom has no layout). Chrome/Edge, `?fake`. Resize / DevTools device too
 - [ ] too-short interval: the two-point hero is replaced by the best-fit slope;
       the calculation section still renders
 - [ ] no clipped math at any width; Esc / backdrop close
+
+---
+
+## Window zoom (graph-only viewport)
+
+Three separate concepts: **MotionRun** (immutable), **AnalysisWindow** (the OLS
+interval), **graph viewport** (`full` / `window`). Zoom changes only the viewport.
+
+### States to check (each × 1024–1920)
+- full 20 s run · small selected window · zoomed small window · flat/stationary
+  zoom · noisy zoom · toward · away · Full Run return · interval changed while
+  zoomed · Use All while zoomed
+
+### Requirements
+- [ ] `Zoom to window` shows in full mode; `Full run` shows in window mode
+      (`aria-pressed` + accent border cue). Button sits at the right of the
+      interval-control row (`margin-left:auto`), wraps left under 720px.
+- [ ] full mode unchanged: whole run, shaded window, both handles + band draggable,
+      Start/End steppers, Use All, OLS line across the selection, speed
+      recalculates on every window change
+- [ ] zoom mode: x viewport = `window.start → window.end`; y viewport derived from
+      the active samples in the window (+ OLS endpoints), with ≥ 0.3 m minimum
+      span so flat motion isn't a compressed line
+- [ ] the zoomed slope is visually obvious — the segment fills the plot
+- [ ] axis tick labels stay sensible at the zoomed scale; **Time (s)** /
+      **Position (m)** labels unchanged
+- [ ] OLS fit line stays restricted to the AnalysisWindow (which now fills the x
+      viewport); regression is never drawn outside the selection
+- [ ] editing Start / End / a handle while zoomed: the viewport follows the new
+      window and re-derives its y-domain; **handles clamp to the current viewport
+      so they shrink-only in zoom mode — the numeric ± steppers (which clamp to
+      the run) and `Full run` are the way to widen.** The teacher is never trapped.
+- [ ] `Full run` returns the viewport to the whole run; the selected window and
+      the speed result are byte-for-byte unchanged
+- [ ] `Use All` while zoomed: window becomes the full run **and** the viewport
+      returns to `full` (least-surprising)
+- [ ] a new acquisition / opening a different saved run resets the viewport to
+      `full` (never carries a zoom across runs)
+- [ ] zoom works for current real / fake / saved runs; no sensor, no persistence
+- [ ] **calculation invariance:** velocity / speed / direction / speed-limit /
+      modal numbers identical before zoom, while zoomed, and after `Full run`
+- [ ] no horizontal overflow, no clipping, graph stays dominant, in every theme

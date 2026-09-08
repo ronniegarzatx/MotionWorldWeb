@@ -94,6 +94,7 @@ describe("pure-model architecture guard", () => {
     "model/speed-limit.ts",
     "model/endpoint-slope.ts",
     "model/speed-workspace.ts",
+    "model/speed-viewport.ts",
   ];
   it("the model math never touches the DOM", () => {
     const offenders = files

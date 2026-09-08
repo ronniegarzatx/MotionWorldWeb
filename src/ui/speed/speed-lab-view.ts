@@ -3,8 +3,15 @@ import type { Route } from "../../app/router.js";
 import type { RunStore } from "../../store/run-store.js";
 import { deserializeRun } from "../../model/stored-run.js";
 import type { MotionRun } from "../../model/motion-run.js";
-import { windowDurationSeconds } from "../../model/analysis-window.js";
+import { activeSamples, windowDurationSeconds } from "../../model/analysis-window.js";
 import type { MotionDirection } from "../../model/rate-analysis.js";
+import {
+  initialViewport,
+  reduceViewport,
+  zoomedXDomain,
+  zoomedYDomain,
+  type SpeedViewport,
+} from "../../model/speed-viewport.js";
 import {
   SPEED_LIMIT_PRESETS_MPH,
   type SpeedLimitComparison,
@@ -16,7 +23,7 @@ import {
   useAllSpeed,
   type SpeedWorkspace,
 } from "../../model/speed-workspace.js";
-import { mountChart, type ChartHandle } from "../chart/time-series-chart.js";
+import { mountChart, type ChartHandle, type ChartInput } from "../chart/time-series-chart.js";
 import { createFrameScheduler } from "../raf.js";
 import { button, el } from "../components/dom.js";
 import { mountSpeedExplainerOverlay } from "./speed-explainer-overlay.js";
@@ -147,6 +154,9 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
   // ── workspace ────────────────────────────────────────────────────────────
   function renderWorkspace(run: MotionRun): () => void {
     let ws: SpeedWorkspace = startSpeedWorkspace(run);
+    // the graph viewport is a THIRD concept, separate from the run and the
+    // AnalysisWindow — a fresh workspace always starts on the full run.
+    let viewport: SpeedViewport = initialViewport();
     let overlayTeardown: (() => void) | null = null;
 
     const chartHost = el("div", { className: "chart-host" });
@@ -190,6 +200,22 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
       const samples = run.samples;
       const w = ws.window;
       const a = ws.analysis;
+      const zoomed = viewport.mode === "window";
+
+      let xDomain: ChartInput["xDomain"] = "auto-grow";
+      let yDomain: ChartInput["yDomain"] = "auto";
+      if (zoomed) {
+        xDomain = zoomedXDomain(w);
+        const ys = activeSamples(w, run).map((s) => s.positionMeters);
+        if (a.ok) {
+          ys.push(
+            a.slopeMetersPerSecond * w.startSeconds + a.interceptMeters,
+            a.slopeMetersPerSecond * w.endSeconds + a.interceptMeters,
+          );
+        }
+        yDomain = zoomedYDomain(ys);
+      }
+
       chart.update({
         series: {
           t: samples.map((s) => s.timestampSeconds),
@@ -197,8 +223,8 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
         },
         xLabel: "Time (s)",
         yLabel: "Position (m)",
-        xDomain: "auto-grow",
-        yDomain: "auto",
+        xDomain,
+        yDomain,
         selection: {
           startT: w.startSeconds,
           endT: w.endSeconds,
@@ -217,14 +243,33 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
     }
 
     function renderControls(): void {
+      const zoomed = viewport.mode === "window";
+      const zoomBtn = button({
+        label: zoomed ? "Full run" : "Zoom to window",
+        onClick: () => {
+          viewport = reduceViewport(viewport, { type: zoomed ? "full-run" : "zoom-to-window" });
+          render();
+        },
+      });
+      zoomBtn.classList.add("speed-controls__zoom");
+      zoomBtn.setAttribute("aria-pressed", String(zoomed));
+
       controls.replaceChildren(
-        button({ label: "Use all", onClick: () => set(useAllSpeed(ws)) }),
+        button({
+          label: "Use all",
+          onClick: () => {
+            // window == full run afterwards, so the least-surprising viewport is "full"
+            viewport = reduceViewport(viewport, { type: "use-all" });
+            set(useAllSpeed(ws));
+          },
+        }),
         stepper("Start", ws.window.startSeconds, (v) =>
           set(setSpeedWindow(ws, v, ws.window.endSeconds)),
         ),
         stepper("End", ws.window.endSeconds, (v) =>
           set(setSpeedWindow(ws, ws.window.startSeconds, v)),
         ),
+        zoomBtn,
       );
     }
 

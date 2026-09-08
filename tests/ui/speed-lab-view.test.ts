@@ -85,6 +85,13 @@ describe("speed-lab-view — no run", () => {
 const follows = (a: Element, b: Element): boolean =>
   Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
+/** the x-axis numeric tick labels currently drawn on the chart */
+const xTicks = (host: HTMLElement): number[] =>
+  [...host.querySelectorAll(".tick-label")]
+    .filter((t) => t.getAttribute("text-anchor") === "middle")
+    .map((t) => Number(t.textContent))
+    .filter((n) => Number.isFinite(n));
+
 describe("speed-lab-view — a run", () => {
   it("main screen shows only YOUR SPEED, the mph value and the direction", async () => {
     const { host } = await withRun(linearWalk("cur"));
@@ -185,6 +192,107 @@ describe("speed-lab-view — a run", () => {
     // baseline: two-point section present for the full window
     expect(host.querySelector(".speed-explain__twopoint")).not.toBeNull();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  });
+
+  // ── window zoom ────────────────────────────────────────────────────────
+  it("Zoom to window / Full run toggles the graph x viewport, not the window", async () => {
+    const { host } = await withRun(linearWalk("cur")); // window [0,4], full x-domain [0,10]
+    const fullMax = Math.max(...xTicks(host));
+    expect(fullMax).toBeGreaterThan(4);
+
+    btn(host, "Zoom to window").click();
+    expect(btn(host, "Full run")).toBeTruthy();
+    const zoomTicks = xTicks(host);
+    expect(Math.max(...zoomTicks)).toBeLessThanOrEqual(4.001); // viewport == window
+    expect(Math.min(...zoomTicks)).toBeGreaterThanOrEqual(-0.001);
+
+    btn(host, "Full run").click();
+    expect(btn(host, "Zoom to window")).toBeTruthy();
+    expect(Math.max(...xTicks(host))).toBe(fullMax); // viewport restored
+  });
+
+  it("the OLS result and the selected window are identical across a zoom toggle", async () => {
+    const { host } = await withRun(kinkedWalk("cur"));
+    const snap = () => ({
+      value: host.querySelector(".speed-result__value")!.textContent,
+      dir: host.querySelector(".speed-result__direction")!.textContent,
+      sel: host.querySelector(".snapshot-selected")!.textContent, // Start stepper readout
+    });
+    const before = snap();
+    btn(host, "Zoom to window").click();
+    expect(snap()).toEqual(before);
+    expect(host.querySelector(".model-curve")).not.toBeNull(); // OLS line still drawn
+    btn(host, "Full run").click();
+    expect(snap()).toEqual(before);
+  });
+
+  it("editing the window while zoomed moves the viewport with it", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    btn(host, "Zoom to window").click();
+    const beforeMax = Math.max(...xTicks(host)); // ~4
+    // shrink the End by one −0.2 s step
+    const endMinus = [...host.querySelectorAll(".snapshot-step")]
+      .find((s) => s.textContent?.startsWith("End"))!
+      .querySelector("button")!; // the "−"
+    endMinus.click();
+    expect(btn(host, "Full run")).toBeTruthy(); // still zoomed
+    expect(Math.max(...xTicks(host))).toBeLessThan(beforeMax); // viewport followed
+  });
+
+  it("Use all while zoomed returns the viewport to the full run", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    btn(host, "Zoom to window").click();
+    btn(host, "Use all").click();
+    expect(btn(host, "Zoom to window")).toBeTruthy(); // no longer zoomed
+    expect(Math.max(...xTicks(host))).toBeGreaterThan(4);
+  });
+
+  it("numeric Start/End controls and the OLS line stay available while zoomed", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    btn(host, "Zoom to window").click();
+    const steppers = [...host.querySelectorAll(".snapshot-step")].map((s) => s.textContent);
+    expect(steppers.some((t) => t?.startsWith("Start"))).toBe(true);
+    expect(steppers.some((t) => t?.startsWith("End"))).toBe(true);
+    expect(host.querySelector(".model-curve")).not.toBeNull();
+  });
+
+  it("a new completed run resets the viewport to full run", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const adapter = new FakeSensorAdapter({ sampleHz: 25 });
+    const controller = new AcquisitionController(adapter, { samplerHz: 25 });
+    vi.spyOn(controller, "lastCompletedRun").mockReturnValue(linearWalk("first"));
+    let runCompleteCb: ((r: ReturnType<typeof linearWalk>) => void) | undefined;
+    const realSub = controller.subscribeRunComplete.bind(controller);
+    vi.spyOn(controller, "subscribeRunComplete").mockImplementation((cb) => {
+      runCompleteCb = cb as typeof runCompleteCb;
+      return realSub(cb);
+    });
+    mountSpeedLabView(host, { controller, runStore: new MemoryRunStore(), navigate: vi.fn() });
+    await flush();
+    btn(host, "Zoom to window").click();
+    expect(btn(host, "Full run")).toBeTruthy();
+
+    runCompleteCb!(linearWalk("second"));
+    await flush();
+    expect(btn(host, "Zoom to window")).toBeTruthy(); // fresh run -> full viewport
+  });
+
+  it("zoom works for a saved run with no sensor, without writing back", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const adapter = new FakeSensorAdapter();
+    const controller = new AcquisitionController(adapter);
+    vi.spyOn(controller, "lastCompletedRun").mockReturnValue(null);
+    const runStore = new MemoryRunStore();
+    await runStore.save(serializeRun(linearWalk("saved-z"), 1_000));
+    const saveSpy = vi.spyOn(runStore, "save");
+    mountSpeedLabView(host, { controller, runStore, navigate: vi.fn(), runId: "saved-z" });
+    await flush();
+    btn(host, "Zoom to window").click();
+    expect(btn(host, "Full run")).toBeTruthy();
+    expect(host.querySelector(".model-curve")).not.toBeNull();
+    expect(saveSpy).not.toHaveBeenCalled();
   });
 
   it("a saved run renders offline and is never written back", async () => {
