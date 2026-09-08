@@ -569,6 +569,78 @@
   font-size: var(--type-body);
 }
 
+/* Speed Lab */
+.speed-lab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.speed-collecting {
+  color: var(--ink-dim);
+  font-size: var(--type-h2);
+}
+.speed-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+.speed-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.speed-result__head {
+  font-size: var(--type-label);
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+}
+.speed-result__value {
+  font-size: var(--type-stat);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.speed-result__direction {
+  font-size: var(--type-h2);
+}
+.speed-result__limit {
+  color: var(--ink-dim);
+}
+.speed-result__velocity {
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.speed-result__provenance {
+  color: var(--ink-faint);
+  font-size: var(--type-label);
+  font-variant-numeric: tabular-nums;
+}
+.speed-result__reason {
+  color: var(--warn, var(--ink-dim));
+  font-size: var(--type-h2);
+}
+.speed-limits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+.speed-limits__label {
+  font-size: var(--type-label);
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+}
+.speed-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.speed-empty__head {
+  font-size: var(--type-h1);
+  font-weight: 650;
+}
+
 /* Target picker */
 .target-picker {
   position: fixed;

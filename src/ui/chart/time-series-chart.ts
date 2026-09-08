@@ -365,15 +365,17 @@ export function mountChart(host: HTMLElement): ChartHandle {
       const f = input.functionOverlay;
       const steps = 160;
       let d = "";
+      let penDown = false; // reset on each NaN so a gap starts a fresh subpath
       for (let i = 0; i <= steps; i++) {
         const x = xDomain[0] + (i / steps) * (xDomain[1] - xDomain[0]);
         const y = f(x);
         if (!Number.isFinite(y)) {
-          d = "";
+          penDown = false;
           continue;
         }
-        const cmd = d === "" ? "M" : "L";
+        const cmd = penDown ? "L" : "M";
         d += `${d === "" ? "" : " "}${cmd} ${xScale(x).toFixed(2)} ${yScale(y).toFixed(2)}`;
+        penDown = true;
       }
       if (d) gClip.appendChild(svg("path", { class: "model-curve", d }));
     }
