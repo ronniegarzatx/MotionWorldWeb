@@ -394,6 +394,15 @@
 .snapshot-legend__model::before {
   border-top: 2px dashed var(--accent);
 }
+.snapshot-legend__note {
+  color: var(--ink-faint);
+  flex-basis: 100%;
+}
+.snapshot-points__caption {
+  color: var(--ink-faint);
+  font-size: var(--type-label);
+  padding: var(--s-1) 0;
+}
 .snapshot-step {
   display: inline-flex;
   align-items: center;

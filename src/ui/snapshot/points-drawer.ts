@@ -29,6 +29,12 @@ export function mountPointsDrawer(
 
   const renderTable = (): void => {
     table.replaceChildren();
+    table.append(
+      el("p", {
+        className: "snapshot-points__caption",
+        textContent: "Classroom coordinates — rounded to the nearest 0.5",
+      }),
+    );
     const t = el("table");
     t.append(
       el(

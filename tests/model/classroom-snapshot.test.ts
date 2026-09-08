@@ -139,4 +139,28 @@ describe("dense classroom motion trace", () => {
     makeClassroomSnapshot(walk, fullWindow(walk), 8);
     expect(JSON.stringify(walk.samples.map((s) => [s.timestampSeconds, s.positionMeters]))).toBe(snap);
   });
+
+  it("every fitPoint lies exactly on the dense trace polyline at its x", () => {
+    // a window whose endpoints and interior representative times fall BETWEEN
+    // samples, so the trace/fit alignment depends on interpolation, not luck
+    const s = makeClassroomSnapshot(walk, withRange(fullWindow(walk), walk, 0.63, 3.29), 6);
+    const pts = s.tracePoints;
+    const traceYAt = (x: number): number => {
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1]!;
+        const b = pts[i]!;
+        if (x >= a.x - 1e-9 && x <= b.x + 1e-9) {
+          const f = b.x === a.x ? 0 : (x - a.x) / (b.x - a.x);
+          return a.y + f * (b.y - a.y);
+        }
+      }
+      return pts.at(-1)!.y;
+    };
+    for (const fp of s.fitPoints) {
+      expect(traceYAt(fp.x)).toBeCloseTo(fp.y, 9);
+    }
+    // and the rounded display points are genuinely different from the fitPoints
+    const anyRounded = s.points.some((p, i) => Math.abs(p.y - s.fitPoints[i]!.y) > 1e-6);
+    expect(anyRounded).toBe(true);
+  });
 });

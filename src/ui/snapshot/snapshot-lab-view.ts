@@ -164,7 +164,10 @@ export function mountSnapshotLabView(host: HTMLElement, deps: SnapshotLabDeps): 
           x: snap.tracePoints.map((p) => p.x),
           y: snap.tracePoints.map((p) => p.y),
         },
-        markers: snap.points.map((p) => ({ t: p.x, x: p.y })),
+        // the GRAPH markers use the precise/unrounded representative points so
+        // they sit exactly on the dense motion trace; the POINTS table shows the
+        // rounded classroom coordinates.
+        markers: snap.fitPoints.map((p) => ({ t: p.x, x: p.y })),
         markerRadius: 6,
         xLabel: "Classroom x",
         yLabel: "Classroom y",
@@ -184,6 +187,10 @@ export function mountSnapshotLabView(host: HTMLElement, deps: SnapshotLabDeps): 
         ...(hasModel
           ? [el("span", { className: "snapshot-legend__item snapshot-legend__model", textContent: "Model" })]
           : []),
+        el("span", {
+          className: "snapshot-legend__note",
+          textContent: "Points on the graph are exact; the Points table rounds to the nearest 0.5.",
+        }),
       );
     }
 
