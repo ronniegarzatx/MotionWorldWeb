@@ -7,6 +7,7 @@ export type Route =
   | "walk"
   | "snapshot"
   | "speed"
+  | "sequence"
   | "runs"
   | "run"
   | "diagnostics";
@@ -25,6 +26,7 @@ const HASH_TO_ROUTE: Record<string, Route> = {
   "#/walk": "walk",
   "#/snapshot": "snapshot",
   "#/speed": "speed",
+  "#/sequence": "sequence",
   "#/runs": "runs",
   "#/diagnostics": "diagnostics",
 };
@@ -36,6 +38,7 @@ const ROUTE_TO_HASH: Record<Route, string> = {
   walk: "#/walk",
   snapshot: "#/snapshot",
   speed: "#/speed",
+  sequence: "#/sequence",
   runs: "#/runs",
   run: "#/run",
   diagnostics: "#/diagnostics",
@@ -53,6 +56,10 @@ export function locationFromHash(hash: string, flags: Flags): Location {
   if (hash.startsWith("#/speed/")) {
     const id = hash.slice("#/speed/".length);
     return { route: "speed", ...(id ? { param: decodeURIComponent(id) } : {}) };
+  }
+  if (hash.startsWith("#/sequence/")) {
+    const id = hash.slice("#/sequence/".length);
+    return { route: "sequence", ...(id ? { param: decodeURIComponent(id) } : {}) };
   }
   const route = HASH_TO_ROUTE[hash] ?? "home";
   // the diagnostics view is developer-only
@@ -97,7 +104,8 @@ export function createRouter(
     },
     navigate(route, param) {
       win.location.hash =
-        (route === "run" || route === "snapshot" || route === "speed") && param
+        (route === "run" || route === "snapshot" || route === "speed" || route === "sequence") &&
+        param
           ? `#/${route}/${encodeURIComponent(param)}`
           : ROUTE_TO_HASH[route];
     },

@@ -13,7 +13,7 @@ const TOOLS: readonly ToolTile[] = [
   { name: "Walk the Line", route: "walk", note: "Match a target motion graph" },
   { name: "Snapshot Lab", route: "snapshot", note: "Model a run with an equation" },
   { name: "Speed Lab", route: "speed", note: "Turn a run into a speed" },
-  { name: "Sequence Lab", route: null, note: "Coming next" },
+  { name: "Sequence Lab", route: "sequence", note: "Bounce & pendulum → a sequence" },
 ];
 
 export interface HomeViewDeps {

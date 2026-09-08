@@ -57,6 +57,11 @@ describe("locationFromHash", () => {
     expect(locationFromHash("#/speed/saved-9", noFlags)).toEqual({ route: "speed", param: "saved-9" });
   });
 
+  it("#/sequence and #/sequence/<id>", () => {
+    expect(locationFromHash("#/sequence", noFlags)).toEqual({ route: "sequence" });
+    expect(locationFromHash("#/sequence/bp-3", noFlags)).toEqual({ route: "sequence", param: "bp-3" });
+  });
+
   it("#/diagnostics needs a debug or fake flag", () => {
     expect(locationFromHash("#/diagnostics", noFlags)).toEqual({ route: "home" });
     expect(locationFromHash("#/diagnostics", debugFlags)).toEqual({ route: "diagnostics" });

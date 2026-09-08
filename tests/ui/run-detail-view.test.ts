@@ -69,6 +69,12 @@ describe("run-detail-view", () => {
     expect(navigate).toHaveBeenCalledWith("speed", "r3c");
   });
 
+  it("Open in Sequence Lab routes to #/sequence/<id>", async () => {
+    const { host, navigate } = await withRun("r3d");
+    [...host.querySelectorAll("button")].find((b) => b.textContent === "Open in Sequence Lab")!.click();
+    expect(navigate).toHaveBeenCalledWith("sequence", "r3d");
+  });
+
   it("missing run -> a friendly message, not a crash", async () => {
     const store = new MemoryRunStore();
     const host = document.createElement("div");

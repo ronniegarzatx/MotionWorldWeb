@@ -22,6 +22,7 @@ import { mountRunsListView } from "../ui/runs/runs-list-view.js";
 import { mountRunDetailView } from "../ui/runs/run-detail-view.js";
 import { mountSnapshotLabView } from "../ui/snapshot/snapshot-lab-view.js";
 import { mountSpeedLabView } from "../ui/speed/speed-lab-view.js";
+import { mountSequenceLabView } from "../ui/sequence/sequence-lab-view.js";
 import { installStartStopKey } from "../ui/keyboard.js";
 import { createRunStore } from "../store/create-run-store.js";
 import { startRunPersistence } from "../store/run-persistence.js";
@@ -134,6 +135,13 @@ export async function startApp(opts: StartAppOptions): Promise<RunningApp> {
           navigate: router.navigate,
           ...(location.param ? { runId: location.param } : {}),
         });
+      case "sequence":
+        return mountSequenceLabView(main, {
+          controller,
+          runStore,
+          navigate: router.navigate,
+          ...(location.param ? { runId: location.param } : {}),
+        });
       case "runs":
         return mountRunsListView(main, { store: runStore, navigate: router.navigate });
       case "run":
@@ -161,7 +169,7 @@ export async function startApp(opts: StartAppOptions): Promise<RunningApp> {
     onShowDetails: (m) => log.add(`[shown to developer] ${m}`),
   });
 
-  const TOOLS = new Set(["live", "data", "walk", "speed"]);
+  const TOOLS = new Set(["live", "data", "walk", "speed", "sequence"]);
   let currentLocation: Location = router.location;
   router.start((location) => {
     // leaving a tool never destroys the connection; an in-progress run is

@@ -173,6 +173,41 @@ describe("startApp", () => {
     expect(container.querySelector(".speed-result__value")).not.toBeNull();
   });
 
+  it("#/sequence mounts Sequence Lab with the shared controller — no 2nd controller, no connect", async () => {
+    const { container, adapter, app } = await boot();
+    const connectSpy = vi.spyOn(adapter, "connect");
+    const c1 = app.controller;
+    hashTo("#/sequence");
+    await vi.runAllTimersAsync();
+    expect(container.querySelector(".sequence-lab, .speed-empty")).not.toBeNull();
+    expect(connectSpy).not.toHaveBeenCalled();
+    expect(app.controller).toBe(c1);
+  });
+
+  it("#/sequence/<id> mounts Sequence Lab from a saved run", async () => {
+    const { container, runStore } = await boot();
+    const { serializeRun } = await import("../../src/model/stored-run.js");
+    const { makeMotionRun } = await import("../../src/model/motion-run.js");
+    const { makeMotionSample } = await import("../../src/model/motion-sample.js");
+    await runStore.save(
+      serializeRun(
+        makeMotionRun({
+          id: "seq-me",
+          samplerHz: 50,
+          source: "fake",
+          deviceLabel: null,
+          samples: Array.from({ length: 120 }, (_, i) =>
+            makeMotionSample(i * 0.02, 0.5 + 0.2 * Math.sin(i * 0.3)),
+          ),
+        }),
+        1,
+      ),
+    );
+    hashTo("#/sequence/seq-me");
+    await vi.runAllTimersAsync();
+    expect(container.querySelector(".sequence-lab")).not.toBeNull();
+  });
+
   it("#/snapshot/<id> mounts Snapshot from a saved run", async () => {
     const { container, runStore } = await boot();
     const { serializeRun } = await import("../../src/model/stored-run.js");
