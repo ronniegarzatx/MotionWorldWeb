@@ -1,6 +1,14 @@
 import type { Flags } from "./flags.js";
 
-export type Route = "home" | "live" | "data" | "walk" | "runs" | "run" | "diagnostics";
+export type Route =
+  | "home"
+  | "live"
+  | "data"
+  | "walk"
+  | "snapshot"
+  | "runs"
+  | "run"
+  | "diagnostics";
 
 /** A resolved location: the route, plus an optional path param (e.g. a run id). */
 export interface Location {
@@ -14,6 +22,7 @@ const HASH_TO_ROUTE: Record<string, Route> = {
   "#/live": "live",
   "#/data": "data",
   "#/walk": "walk",
+  "#/snapshot": "snapshot",
   "#/runs": "runs",
   "#/diagnostics": "diagnostics",
 };
@@ -23,6 +32,7 @@ const ROUTE_TO_HASH: Record<Route, string> = {
   live: "#/live",
   data: "#/data",
   walk: "#/walk",
+  snapshot: "#/snapshot",
   runs: "#/runs",
   run: "#/run",
   diagnostics: "#/diagnostics",
@@ -32,6 +42,10 @@ export function locationFromHash(hash: string, flags: Flags): Location {
   if (hash.startsWith("#/run/")) {
     const id = hash.slice("#/run/".length);
     return id ? { route: "run", param: decodeURIComponent(id) } : { route: "runs" };
+  }
+  if (hash.startsWith("#/snapshot/")) {
+    const id = hash.slice("#/snapshot/".length);
+    return { route: "snapshot", ...(id ? { param: decodeURIComponent(id) } : {}) };
   }
   const route = HASH_TO_ROUTE[hash] ?? "home";
   // the diagnostics view is developer-only
@@ -76,8 +90,8 @@ export function createRouter(
     },
     navigate(route, param) {
       win.location.hash =
-        route === "run" && param
-          ? `#/run/${encodeURIComponent(param)}`
+        (route === "run" || route === "snapshot") && param
+          ? `#/${route}/${encodeURIComponent(param)}`
           : ROUTE_TO_HASH[route];
     },
     stop() {

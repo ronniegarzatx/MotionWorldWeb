@@ -48,7 +48,16 @@ export function mountRunDetailView(host: HTMLElement, deps: RunDetailDeps): () =
 
     const interrupted = interruptedLabel(stored.stopReason);
     root.append(
-      back,
+      el(
+        "div",
+        { className: "run-detail__actions" },
+        back,
+        button({
+          label: "Open in Snapshot",
+          variant: "primary",
+          onClick: () => deps.navigate("snapshot", stored.id),
+        }),
+      ),
       el(
         "div",
         { className: "run-detail__head" },

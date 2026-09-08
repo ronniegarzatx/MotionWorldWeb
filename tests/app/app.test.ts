@@ -112,6 +112,39 @@ describe("startApp", () => {
     expect(app.controller).toBe(c1);
   });
 
+  it("#/snapshot mounts Snapshot Lab with the shared controller — no 2nd controller, no connect", async () => {
+    const { container, adapter, app } = await boot();
+    const connectSpy = vi.spyOn(adapter, "connect");
+    const c1 = app.controller;
+    hashTo("#/snapshot");
+    await vi.runAllTimersAsync();
+    expect(container.querySelector(".snapshot-lab, .snapshot-empty")).not.toBeNull();
+    expect(connectSpy).not.toHaveBeenCalled();
+    expect(app.controller).toBe(c1);
+  });
+
+  it("#/snapshot/<id> mounts Snapshot from a saved run", async () => {
+    const { container, runStore } = await boot();
+    const { serializeRun } = await import("../../src/model/stored-run.js");
+    const { makeMotionRun } = await import("../../src/model/motion-run.js");
+    const { makeMotionSample } = await import("../../src/model/motion-sample.js");
+    await runStore.save(
+      serializeRun(
+        makeMotionRun({
+          id: "snap-me",
+          samplerHz: 25,
+          source: "fake",
+          deviceLabel: null,
+          samples: Array.from({ length: 20 }, (_, i) => makeMotionSample(i * 0.04, 1 + i * 0.05)),
+        }),
+        1,
+      ),
+    );
+    hashTo("#/snapshot/snap-me");
+    await vi.runAllTimersAsync();
+    expect(container.querySelector(".snapshot-mode__name")!.textContent).toBe("Raw Run");
+  });
+
   it("#/run/<id> mounts the saved-run detail (no sensor needed)", async () => {
     const { container, runStore } = await boot();
     const { serializeRun } = await import("../../src/model/stored-run.js");

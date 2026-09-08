@@ -13,12 +13,12 @@ function setup() {
 const tiles = (host: HTMLElement) => [...host.querySelectorAll(".tile")] as HTMLButtonElement[];
 
 describe("home-view", () => {
-  it("has 6 tiles — 3 active, 3 disabled", () => {
+  it("has 6 tiles — 4 active, 2 disabled", () => {
     const { host } = setup();
     const all = tiles(host);
     expect(all).toHaveLength(6);
-    expect(all.filter((t) => !t.disabled)).toHaveLength(3);
-    expect(all.filter((t) => t.disabled)).toHaveLength(3);
+    expect(all.filter((t) => !t.disabled)).toHaveLength(4);
+    expect(all.filter((t) => t.disabled)).toHaveLength(2);
   });
 
   it("renders exactly the six peer tiles in order", () => {
@@ -33,23 +33,23 @@ describe("home-view", () => {
     ]);
   });
 
-  it("Live Lab, Data Display, Walk the Line are active and navigate", () => {
+  it("Live Lab, Data Display, Walk the Line, Snapshot Lab are active and navigate", () => {
     const { host, navigate } = setup();
-    const [live, data, walk] = tiles(host);
-    expect(live!.disabled).toBe(false);
-    expect(data!.disabled).toBe(false);
-    expect(walk!.disabled).toBe(false);
+    const [live, data, walk, snapshot] = tiles(host);
+    for (const t of [live, data, walk, snapshot]) expect(t!.disabled).toBe(false);
     live!.click();
     data!.click();
     walk!.click();
+    snapshot!.click();
     expect(navigate).toHaveBeenNthCalledWith(1, "live");
     expect(navigate).toHaveBeenNthCalledWith(2, "data");
     expect(navigate).toHaveBeenNthCalledWith(3, "walk");
+    expect(navigate).toHaveBeenNthCalledWith(4, "snapshot");
   });
 
-  it("Snapshot / Speed / Sequence are disabled and inert", () => {
+  it("Speed / Sequence are disabled and inert", () => {
     const { host, navigate } = setup();
-    const disabled = tiles(host).slice(3);
+    const disabled = tiles(host).slice(4);
     for (const t of disabled) {
       expect(t.disabled).toBe(true);
       expect(t.className).toContain("tile--disabled");
