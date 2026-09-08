@@ -76,3 +76,26 @@ describe("persistence-boundary architecture guard", () => {
     expect(offenders.filter((p) => p !== "app/app.ts")).toEqual([]);
   });
 });
+
+/**
+ * Pure model modules (M3 §2–5, §12): the math is framework-free and testable in
+ * isolation — no DOM, no `document`.
+ */
+describe("pure-model architecture guard", () => {
+  const PURE = [
+    "model/run-interpolation.ts",
+    "model/classroom-snapshot.ts",
+    "model/model-fit.ts",
+    "model/suggest-model.ts",
+    "model/classroom-equation.ts",
+    "model/snapshot-workspace.ts",
+    "model/analysis-window.ts",
+  ];
+  it("the model math never touches the DOM", () => {
+    const offenders = files
+      .filter((f) => PURE.includes(f.path))
+      .filter((f) => /\bdocument\b|from ["'][^"']*\/ui\//.test(f.text))
+      .map((f) => f.path);
+    expect(offenders).toEqual([]);
+  });
+});

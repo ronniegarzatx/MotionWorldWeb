@@ -32,9 +32,9 @@ diagnostics live behind `?debug=sensor`.
 
 | | |
 |---|---|
-| **Tools** | Live Lab · Data Display · Walk the Line |
+| **Tools** | Live Lab · Data Display · Walk the Line · Snapshot Lab |
 | **Utility** | Runs (`#/runs`) — saved collections |
-| **Coming next** | Snapshot Lab · Speed Lab · Sequence Lab |
+| **Coming next** | Speed Lab · Sequence Lab |
 
 - **Milestone 1** — app shell, Home, Live Lab, Data Display, shared acquisition
   control, web-native dark-first design system.
@@ -62,6 +62,24 @@ diagnostics live behind `?debug=sensor`.
     to temporary in-memory storage and says so.
   - *`AnalysisWindow`* — a pure, immutable interval selection over a run. The
     foundation Snapshot Lab and Speed Lab will build on. Not a user feature yet.
+- **Milestone 3 — Snapshot Lab.** Turn a dense position-vs-time run into a clean
+  classroom coordinate set you can model with an equation.
+  - **The measured `MotionRun` is never modified.** The Classroom Snapshot is a
+    derived, session-only coordinate view.
+  - Choose an interval on the graph (draggable handles or Start/End steppers),
+    then **Make Snapshot** — the interval is rescaled onto a classroom x/y grid
+    and a few representative points (3–10, default 5) are sampled by linear
+    interpolation. Display points are rounded to the nearest 0.5; **the model fit
+    uses the unrounded values.**
+  - Fit **Constant / Linear / Quadratic / Cubic / Absolute value / Square root /
+    Exponential** — a family may honestly refuse if the points don't support it.
+    **Suggest** deterministically picks the simplest model that fits well enough.
+  - The big **`f(x) ≈ …`** is a classroom-friendly *approximation* (coefficients
+    snapped for readability); a smaller **`precise fit: f(x) = …`** and `r²` stay
+    visible, and the graph's model curve is the *exact* regression. **Show Large**
+    is a projector overlay; long equations never crop.
+  - Works from the latest run or a saved run (**Runs → Open in Snapshot**) —
+    no sensor needed.
 
 - Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
 - Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)

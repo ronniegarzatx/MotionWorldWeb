@@ -57,6 +57,12 @@ describe("portable artifact (real build)", () => {
     expect(html).toMatch(/Temporary storage/); // the MemoryRunStore fallback notice
   });
 
+  it("bundles Snapshot Lab (no network math renderer)", () => {
+    expect(html).toContain("Classroom Snapshot");
+    expect(html).toMatch(/NO RUN TO SNAPSHOT/);
+    expect(html).not.toMatch(/mathjax|katex/i);
+  });
+
   it("applies the offline CSP", () => {
     expect(html).toMatch(/Content-Security-Policy[\s\S]*default-src 'none'/i);
   });
