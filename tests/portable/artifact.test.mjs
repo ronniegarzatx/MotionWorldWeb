@@ -75,6 +75,15 @@ describe("portable artifact (real build)", () => {
     expect(html).toContain("How was this speed calculated?"); // Δ button accessible name
   });
 
+  it("bundles Sequence Lab (bounce/pendulum cycle analysis is all local TS)", () => {
+    expect(html).toContain("Sequence Lab");
+    expect(html).toContain("RAW MOTION");
+    expect(html).toContain("COMMON RATIO");
+    expect(html).toContain("AVERAGE PERIOD");
+    expect(html).toContain("TURNING-POINT AMPLITUDE");
+    expect(html).not.toMatch(/mathjax|katex|scipy|pyodide/i);
+  });
+
   it("bundles the theme system with no external assets", () => {
     expect(html).toContain("Kusama Dots");
     expect(html).toContain("Daylight");

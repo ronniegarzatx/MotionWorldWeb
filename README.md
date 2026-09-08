@@ -25,16 +25,16 @@ position trace, completed a 1894-sample run, and stopped from the physical blue
 button — with no native helper, driver, backend, or admin rights. Direct WebHID
 is viable.
 
-**Now:** the Motion World application — a six-tool Home with **Live Lab**,
-**Data Display**, **Walk the Line**, **Snapshot Lab**, and **Speed Lab** active,
-a **Runs** utility, on the sensor/acquisition/model layer built and
-hardware-verified in M0. Protocol diagnostics live behind `?debug=sensor`.
+**Now:** the Motion World application — a **six-tool** Home, all active:
+**Live Lab**, **Data Display**, **Walk the Line**, **Snapshot Lab**,
+**Speed Lab**, **Sequence Lab** — plus a **Runs** utility, on the
+sensor/acquisition/model layer built and hardware-verified in M0. Protocol
+diagnostics live behind `?debug=sensor`.
 
 | | |
 |---|---|
-| **Tools** | Live Lab · Data Display · Walk the Line · Snapshot Lab · Speed Lab |
+| **Tools** | Live Lab · Data Display · Walk the Line · Snapshot Lab · Speed Lab · Sequence Lab |
 | **Utility** | Runs (`#/runs`) — saved collections |
-| **Coming next** | Sequence Lab |
 | **Themes** | Midnight (default) · Daylight · Dusk · Kusama Dots — header picker, persists locally, token-only |
 
 - **Milestone 1** — app shell, Home, Live Lab, Data Display, shared acquisition
@@ -105,6 +105,33 @@ hardware-verified in M0. Protocol diagnostics live behind `?debug=sensor`.
   - Refuses with plain copy (never NaN) for an interval that is too short or has
     invalid timestamps.
 
+- **Milestone 5 — Sequence Lab (Bounce + Pendulum).** Turn a real physical
+  cycle into a discrete sequence students can analyse by index `n`. Two modes,
+  optimised — no generic sequence framework, no timed/manual capture, no
+  sinusoid fitting.
+  - **Everything is derived from the immutable raw `MotionRun`, after Stop.**
+    Nothing rewrites raw samples; derived events / terms / ratios are session-only
+    and not persisted. Works from the latest run, a fresh collection, or a saved
+    run (**Runs → Open in Sequence Lab**, no sensor).
+  - **Bounce:** detects the bounce apexes (orientation-agnostic — apex may be a
+    maximum *or* a minimum), cross-checks a settled resting level and **refuses
+    honestly** if the ball never settles, then plots `n` vs **bounce height**
+    (`abs(apex − resting level)`) and a robust **common ratio** `r ≈ …` with a
+    `RATIO LOOKS CONSISTENT` / `RATIO VARIES` verdict and, with enough terms,
+    `aₙ ≈ a₁·rⁿ⁻¹`.
+  - **Pendulum:** detects the swing extrema and a robust midline, then either
+    **TURNING-POINT AMPLITUDE** (`|extremum − midline|` per half-cycle → an
+    approximate decay + amplitude ratio) or **PERIOD** (full periods from like
+    extrema, with a deterministic side-selection rule → **AVERAGE PERIOD** `T ≈ …`
+    and a `PERIOD LOOKS CONSISTENT` / `PERIOD VARIES` verdict). No forced
+    arithmetic/geometric language.
+  - One compact `PEAK SENSITIVITY` control (`Low / Standard / High`) reruns
+    detection on the same run — never recollects. A lightweight non-destructive
+    term range trims a poor first/last event; excluded events stay visible,
+    muted, never deleted.
+  - All cycle detection and sequence maths are bundled TypeScript — no SciPy, no
+    Pyodide, no remote DSP.
+
 - Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
 - Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)
 - Protocol research: [`docs/research/go-motion-webhid-protocol.md`](docs/research/go-motion-webhid-protocol.md)
@@ -161,10 +188,12 @@ never touches HID. See the plan for the full module map.
 
 ## Scope (V1)
 
-**Five tools:** Live Lab · Data Display · Snapshot Lab · Speed Lab · Sequence Lab.
+**Six tools, all shipped:** Live Lab · Data Display · Walk the Line · Snapshot
+Lab · Speed Lab · Sequence Lab (Bounce + Pendulum).
 
-**Out of V1:** Inverse Lab, Walk the Line, Pendulum Lab, standards, accounts,
-cloud sync, any backend, student live-view/broadcast.
+**Out of V1:** Inverse Lab, a full Pendulum Lab / sinusoid fitting, a general
+sequence framework, standards, accounts, cloud sync, any backend, student
+live-view/broadcast.
 
 ## Architecture in one paragraph
 
