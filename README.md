@@ -67,10 +67,11 @@ diagnostics live behind `?debug=sensor`.
   - **The measured `MotionRun` is never modified.** The Classroom Snapshot is a
     derived, session-only coordinate view.
   - Choose an interval on the graph (draggable handles or Start/End steppers),
-    then **Make Snapshot** — the interval is rescaled onto a classroom x/y grid
-    and a few representative points (3–10, default 5) are sampled by linear
-    interpolation. Display points are rounded to the nearest 0.5; **the model fit
-    uses the unrounded values.**
+    then **Make Snapshot** — the interval is rescaled onto a classroom x/y grid.
+    A **dense Motion trace** (every selected sample, unrounded) preserves the
+    shape of the walk; on top of it sit a few larger representative **Points**
+    (3–10, default 5, deterministic), rounded to the nearest 0.5 for readability
+    — **the model fit uses the unrounded values.**
   - Fit **Constant / Linear / Quadratic / Cubic / Absolute value / Square root /
     Exponential** — a family may honestly refuse if the points don't support it.
     **Suggest** deterministically picks the simplest model that fits well enough.
