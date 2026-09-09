@@ -101,6 +101,7 @@ describe("pure-model architecture guard", () => {
     "model/pendulum-analysis.ts",
     "model/sequence-range.ts",
     "model/sequence-workspace.ts",
+    "model/art-signal.ts",
   ];
   it("the model math never touches the DOM", () => {
     const offenders = files
