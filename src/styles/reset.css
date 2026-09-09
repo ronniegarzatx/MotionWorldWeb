@@ -19,6 +19,14 @@ body {
   font: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /*
+   * Motion World has no text-entry fields. Without this, browser
+   * caret-browsing (or a stray focusable/selectable element) can plant a
+   * blinking insertion caret in ordinary headings/labels/numbers, which reads
+   * as an editable document on a classroom projector. `auto` is restored
+   * explicitly below for the few element types that are actually editable.
+   */
+  caret-color: transparent;
 }
 
 button,
@@ -26,6 +34,12 @@ input,
 select {
   font: inherit;
   color: inherit;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  caret-color: auto;
 }
 
 :focus-visible {
