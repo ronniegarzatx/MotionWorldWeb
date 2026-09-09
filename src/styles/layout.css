@@ -171,6 +171,76 @@
   gap: var(--s-3);
 }
 
+/* Art Party — immersive canvas special mode (#/art). Not a classroom lab:
+   the canvas fills the whole route; the overlay floats above it in its own
+   opaque panels so status/controls stay readable over whatever is animating
+   underneath, in every theme. */
+.art-party {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #000;
+  overflow: hidden;
+}
+.art-party__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.art-party__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+.art-party__top {
+  align-self: flex-start;
+  display: inline-flex;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.35);
+  pointer-events: auto;
+}
+.art-party__effect-label {
+  font-size: var(--type-h1);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s-2) var(--s-4);
+}
+.art-party__bottom {
+  align-self: center;
+  display: flex;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.35);
+  pointer-events: auto;
+}
+.art-party__overlay--faded {
+  opacity: 0;
+}
+.art-party__overlay--faded .art-party__top,
+.art-party__overlay--faded .art-party__bottom {
+  pointer-events: none;
+}
+
 @media (max-width: 1023px) {
   .small-screen-hint {
     display: block;
