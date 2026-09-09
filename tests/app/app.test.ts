@@ -208,6 +208,22 @@ describe("startApp", () => {
     expect(container.querySelector(".sequence-lab")).not.toBeNull();
   });
 
+  it("#/art mounts Art Party with the shared controller — no 2nd controller, no connect", async () => {
+    const { container, adapter, app } = await boot();
+    const connectSpy = vi.spyOn(adapter, "connect");
+    const c1 = app.controller;
+    hashTo("#/art");
+    // Art Party runs a continuous RAF loop (unlike the other tools' one-shot
+    // redraws), so runAllTimersAsync would never settle — advance a bounded
+    // amount instead.
+    await vi.advanceTimersByTimeAsync(50);
+    expect(container.querySelector(".art-party__canvas")).not.toBeNull();
+    expect(connectSpy).not.toHaveBeenCalled();
+    expect(app.controller).toBe(c1);
+    // the immersive route hides the classroom header
+    expect((container.querySelector(".app-header") as HTMLElement).hidden).toBe(true);
+  });
+
   it("#/snapshot/<id> mounts Snapshot from a saved run", async () => {
     const { container, runStore } = await boot();
     const { serializeRun } = await import("../../src/model/stored-run.js");

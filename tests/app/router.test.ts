@@ -62,6 +62,10 @@ describe("locationFromHash", () => {
     expect(locationFromHash("#/sequence/bp-3", noFlags)).toEqual({ route: "sequence", param: "bp-3" });
   });
 
+  it("#/art round-trips", () => {
+    expect(locationFromHash("#/art", noFlags)).toEqual({ route: "art" });
+  });
+
   it("#/diagnostics needs a debug or fake flag", () => {
     expect(locationFromHash("#/diagnostics", noFlags)).toEqual({ route: "home" });
     expect(locationFromHash("#/diagnostics", debugFlags)).toEqual({ route: "diagnostics" });
@@ -96,6 +100,8 @@ describe("createRouter", () => {
     expect(win.location.hash).toBe("#/runs");
     r.navigate("run", "run 7");
     expect(win.location.hash).toBe("#/run/run%207");
+    r.navigate("art");
+    expect(win.location.hash).toBe("#/art");
   });
 
   it("stop() detaches", () => {

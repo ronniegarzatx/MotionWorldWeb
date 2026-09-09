@@ -33,6 +33,26 @@ export function mountHomeView(host: HTMLElement, deps: HomeViewDeps): () => void
       }),
     ),
   );
-  host.appendChild(grid);
-  return () => grid.remove();
+
+  // A smaller, visually distinct special mode — not a seventh classroom lab
+  // (design spec §13). Sensor-powered, non-educational generative visuals.
+  const artButton = el(
+    "button",
+    { className: "home-special__btn" },
+    el("span", { className: "home-special__mark", textContent: "✦" }),
+    el("span", { className: "home-special__label", textContent: "Art Party" }),
+  );
+  artButton.addEventListener("click", () => deps.navigate("art"));
+  const special = el(
+    "div",
+    { className: "home-special" },
+    artButton,
+    el("p", { className: "home-special__note", textContent: "Sensor-powered visuals" }),
+  );
+
+  host.append(grid, special);
+  return () => {
+    grid.remove();
+    special.remove();
+  };
 }

@@ -76,6 +76,12 @@ export function mountShell(container: HTMLElement, deps: ShellDeps): Shell {
     renderLocation(location) {
       teardownView?.();
       main.replaceChildren();
+      // Art Party renders its own minimal overlay (status/Connect/Start-Stop/
+      // Change Effect/Exit) in place of the classroom header, so the canvas
+      // can use the full viewport (design spec §4).
+      const immersive = location.route === "art";
+      header.hidden = immersive;
+      main.classList.toggle("app-main--immersive", immersive);
       teardownView = deps.mountRoute(location, main);
     },
     teardown() {

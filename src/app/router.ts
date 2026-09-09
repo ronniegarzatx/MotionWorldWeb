@@ -8,6 +8,7 @@ export type Route =
   | "snapshot"
   | "speed"
   | "sequence"
+  | "art"
   | "runs"
   | "run"
   | "diagnostics";
@@ -27,6 +28,7 @@ const HASH_TO_ROUTE: Record<string, Route> = {
   "#/snapshot": "snapshot",
   "#/speed": "speed",
   "#/sequence": "sequence",
+  "#/art": "art",
   "#/runs": "runs",
   "#/diagnostics": "diagnostics",
 };
@@ -39,6 +41,7 @@ const ROUTE_TO_HASH: Record<Route, string> = {
   snapshot: "#/snapshot",
   speed: "#/speed",
   sequence: "#/sequence",
+  art: "#/art",
   runs: "#/runs",
   run: "#/run",
   diagnostics: "#/diagnostics",

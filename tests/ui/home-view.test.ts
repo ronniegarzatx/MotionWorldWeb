@@ -52,4 +52,22 @@ describe("home-view", () => {
     const { host } = setup();
     expect(host.textContent ?? "").not.toMatch(/roadmap|activity library|standards/i);
   });
+
+  it("Art Party is a smaller special control, not a seventh grid tile", () => {
+    const { host, navigate } = setup();
+    // the six-tile grid stays exactly six — Art Party is not counted among them
+    expect(tiles(host)).toHaveLength(6);
+    expect(tiles(host).some((t) => t.textContent?.includes("Art Party"))).toBe(false);
+
+    const special = host.querySelector(".home-special")!;
+    expect(special).not.toBeNull();
+    // a sibling of the grid, not inside it
+    expect(host.querySelector(".home-grid")!.contains(special)).toBe(false);
+    const btn = special.querySelector(".home-special__btn") as HTMLButtonElement;
+    expect(btn.classList.contains("tile")).toBe(false);
+    expect(btn.textContent).toContain("Art Party");
+
+    btn.click();
+    expect(navigate).toHaveBeenLastCalledWith("art");
+  });
 });

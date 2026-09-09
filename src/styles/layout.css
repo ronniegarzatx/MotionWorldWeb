@@ -16,6 +16,11 @@
   top: 0;
   z-index: 10;
 }
+/* .app-header{display:flex} is an author-origin rule and beats the UA's
+   [hidden]{display:none} default, so this override must be explicit. */
+.app-header[hidden] {
+  display: none;
+}
 
 .app-wordmark {
   font-weight: 700;
@@ -36,6 +41,9 @@
   flex-direction: column;
   min-height: 0;
 }
+.app-main--immersive {
+  padding: 0;
+}
 
 /* Home: six equal peer tiles — a balanced 3x2 at projector widths. */
 .home-grid {
@@ -55,6 +63,43 @@
   .home-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Home's special-mode control — smaller and visually distinct from the six
+   equal classroom tiles above it, never a seventh peer tile. */
+.home-special {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  max-width: 1100px;
+  margin: var(--s-5) auto 0;
+}
+.home-special__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--type-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.home-special__btn:hover,
+.home-special__btn:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.home-special__mark {
+  color: var(--accent);
+}
+.home-special__note {
+  font-size: var(--type-label);
+  color: var(--ink-faint);
 }
 
 /* Live Lab: graph dominates. */
