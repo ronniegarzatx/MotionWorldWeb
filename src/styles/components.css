@@ -659,21 +659,24 @@
  */
 .speed-lab {
   display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: var(--s-3);
+  /* the graph row is the one flexible track — minmax(0, 1fr) lets it fill
+     whatever space the header/deck leave rather than growing past it, which
+     is what was pushing the graph's bottom/x-axis off a projector viewport */
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--s-2);
   flex: 1;
   min-height: 0;
 }
 .speed-lab .chart-host {
-  min-height: 340px;
-  height: 64vh;
+  min-height: 300px;
+  height: 100%;
   background: var(--surface-inset);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
 .speed-lab--collecting {
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 .speed-collecting {
   color: var(--ink-dim);
@@ -810,7 +813,9 @@
   }
 }
 
-/* the result block reserves a stable width so a changing value never reflows */
+/* the result block reserves a stable width so a changing value never reflows.
+   head + value share a baseline row (label beside the number, not stacked
+   above it) so the whole result reads as two compact lines, not three. */
 .speed-result {
   display: flex;
   flex-direction: column;
@@ -819,6 +824,13 @@
   gap: var(--s-1);
   flex: 0 0 auto;
   min-width: min(20rem, 100%);
+}
+.speed-result__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--s-2);
 }
 .speed-result__head {
   font-size: var(--type-h2);
@@ -833,7 +845,7 @@
   line-height: 1;
 }
 .speed-result__direction {
-  font-size: var(--type-h1);
+  font-size: var(--type-h2);
   color: var(--ink);
 }
 .speed-result__reason {

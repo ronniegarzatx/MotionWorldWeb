@@ -368,14 +368,21 @@ export function mountSpeedLabView(host: HTMLElement, deps: SpeedLabDeps): () => 
     }
 
     function renderResult(): void {
-      resultSlot.replaceChildren(el("p", { className: "speed-result__head", textContent: "YOUR SPEED" }));
       const a = ws.analysis;
       if (!a.ok) {
-        resultSlot.append(el("p", { className: "speed-result__reason", textContent: a.reason }));
+        resultSlot.replaceChildren(
+          el("p", { className: "speed-result__head", textContent: "YOUR SPEED" }),
+          el("p", { className: "speed-result__reason", textContent: a.reason }),
+        );
         return;
       }
-      resultSlot.append(
-        el("p", { className: "speed-result__value", textContent: `${a.speedMilesPerHour.toFixed(1)} mph` }),
+      resultSlot.replaceChildren(
+        el(
+          "div",
+          { className: "speed-result__row" },
+          el("span", { className: "speed-result__head", textContent: "YOUR SPEED" }),
+          el("span", { className: "speed-result__value", textContent: `${a.speedMilesPerHour.toFixed(1)} mph` }),
+        ),
         el("p", { className: "speed-result__direction", textContent: DIRECTION_PHRASE[a.direction] }),
       );
     }

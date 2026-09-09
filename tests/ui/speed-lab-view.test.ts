@@ -131,6 +131,17 @@ describe("speed-lab-view — a run", () => {
     expect(host.textContent).not.toMatch(/NaN|Infinity/);
   });
 
+  it("the projector-compact result reads YOUR SPEED + value on one row, direction below", async () => {
+    const { host } = await withRun(linearWalk("cur"));
+    const row = host.querySelector(".speed-result__row")!;
+    expect(row).not.toBeNull();
+    expect(row.querySelector(".speed-result__head")).not.toBeNull();
+    expect(row.querySelector(".speed-result__value")).not.toBeNull();
+    // direction is a sibling of the row, not nested inside it
+    const direction = host.querySelector(".speed-result__direction")!;
+    expect(row.contains(direction)).toBe(false);
+  });
+
   it("all controls sit in one deck above the graph — nothing below it", async () => {
     const { host } = await withRun(linearWalk("cur"));
     const lab = host.querySelector(".speed-lab")!;
