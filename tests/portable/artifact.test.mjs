@@ -84,6 +84,19 @@ describe("portable artifact (real build)", () => {
     expect(html).not.toMatch(/mathjax|katex|scipy|pyodide/i);
   });
 
+  it("bundles Art Party (sensor-driven Canvas 2D visuals, no remote runtime dependency)", () => {
+    expect(html).toContain("Art Party");
+    expect(html).toContain("Sensor-powered visuals");
+    expect(html).toContain("Change Effect");
+    // effect family names — string literals, so they survive minification
+    expect(html).toContain("Color Wash");
+    expect(html).toContain("Neon Rings");
+    expect(html).toContain("Particle Burst");
+    expect(html).toContain("Wave Field");
+    expect(html).toContain("Radial Geometry");
+    expect(html).toContain("Confetti Party");
+  });
+
   it("bundles the theme system with no external assets", () => {
     expect(html).toContain("Kusama Dots");
     expect(html).toContain("Daylight");

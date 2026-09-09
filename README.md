@@ -27,13 +27,15 @@ is viable.
 
 **Now:** the Motion World application — a **six-tool** Home, all active:
 **Live Lab**, **Data Display**, **Walk the Line**, **Snapshot Lab**,
-**Speed Lab**, **Sequence Lab** — plus a **Runs** utility, on the
-sensor/acquisition/model layer built and hardware-verified in M0. Protocol
-diagnostics live behind `?debug=sensor`.
+**Speed Lab**, **Sequence Lab** — plus a **Runs** utility and a special
+non-educational mode, **Art Party**, on the sensor/acquisition/model layer
+built and hardware-verified in M0. Protocol diagnostics live behind
+`?debug=sensor`.
 
 | | |
 |---|---|
 | **Tools** | Live Lab · Data Display · Walk the Line · Snapshot Lab · Speed Lab · Sequence Lab |
+| **Special mode** | Art Party (`#/art`) — live sensor-powered generative visuals. Non-educational: no graphs, numbers, or lesson copy — the sensor becomes a creative instrument. |
 | **Utility** | Runs (`#/runs`) — saved collections |
 | **Themes** | Midnight (default) · Daylight · Dusk · Kusama Dots — header picker, persists locally, token-only |
 
@@ -190,6 +192,12 @@ never touches HID. See the plan for the full module map.
 
 **Six tools, all shipped:** Live Lab · Data Display · Walk the Line · Snapshot
 Lab · Speed Lab · Sequence Lab (Bounce + Pendulum).
+
+**Plus one special mode:** Art Party (`#/art`) — a non-educational, sensor-driven
+generative visuals instrument. No graphs, equations, or numbers; six Canvas 2D
+effect families respond live to the same sensor stream, through the same
+`AcquisitionController`. Silent, no persistence beyond the ordinary Runs
+autosave, respects `prefers-reduced-motion`.
 
 **Out of V1:** Inverse Lab, a full Pendulum Lab / sinusoid fitting, a general
 sequence framework, standards, accounts, cloud sync, any backend, student

@@ -111,3 +111,30 @@ describe("pure-model architecture guard", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * Art Party (design spec §14): a second live *subscriber* to the one shared
+ * AcquisitionController, never a second *acquirer*. The sensor-boundary and
+ * persistence-boundary guards above already blanket-cover src/art/ and
+ * src/screens/art-party-view.ts (they scan everything outside src/sensor/
+ * and src/store/ respectively) — this block adds the one Art-specific rule:
+ * effects must draw all randomness from the injected SeededRandom, never
+ * Math.random() directly, so a seed reproduces an effect deterministically.
+ */
+describe("art architecture guard", () => {
+  it("nothing under src/art/ imports GoMotionWebHIDAdapter directly", () => {
+    const offenders = files
+      .filter((f) => f.path.startsWith("art/"))
+      .filter((f) => /GoMotionWebHIDAdapter/.test(f.text))
+      .map((f) => f.path);
+    expect(offenders).toEqual([]);
+  });
+
+  it("no effect file calls Math.random( directly", () => {
+    const offenders = files
+      .filter((f) => f.path.startsWith("art/effects/"))
+      .filter((f) => /Math\.random\(/.test(f.text))
+      .map((f) => f.path);
+    expect(offenders).toEqual([]);
+  });
+});
