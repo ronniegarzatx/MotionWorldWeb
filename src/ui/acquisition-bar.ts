@@ -43,7 +43,7 @@ function model(ui: AcquisitionUiState, c: AcquisitionController): BarModel {
         dot: "ok",
         label: "Sensor Ready",
         actions: [
-          { label: "Disarm", run: () => void c.disarm() },
+          { label: "Cancel", run: () => void c.disarm() },
           { label: "Start", run: () => void c.start(), variant: "primary" },
         ],
       };

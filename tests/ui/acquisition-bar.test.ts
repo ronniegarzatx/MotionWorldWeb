@@ -35,7 +35,7 @@ describe("acquisition bar", () => {
 
     await controller.arm();
     expect(label(host)).toBe("Sensor Ready");
-    expect(buttons(host)).toEqual(["Disarm", "Start"]);
+    expect(buttons(host)).toEqual(["Cancel", "Start"]);
 
     await controller.start();
     expect(label(host)).toBe("Collecting");

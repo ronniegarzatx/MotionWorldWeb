@@ -132,7 +132,7 @@ export function mountSensorDiagnosticsView(
     reconnectBtn.disabled = !s.canReconnect;
     disconnectBtn.disabled = !s.connected;
     readyBtn.disabled = !(s.canArm || s.canDisarm);
-    readyBtn.textContent = s.canDisarm ? "DISARM" : "SENSOR READY";
+    readyBtn.textContent = s.canDisarm ? "CANCEL" : "SENSOR READY";
     startBtn.disabled = !s.canStart;
     stopBtn.disabled = !s.canStop;
     if (s.lastError) {
