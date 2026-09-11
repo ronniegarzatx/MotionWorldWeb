@@ -95,6 +95,7 @@ describe("portable artifact (real build)", () => {
     expect(html).toContain("Wave Field");
     expect(html).toContain("Radial Geometry");
     expect(html).toContain("Confetti Party");
+    expect(html).toContain("Kusama Dots");
   });
 
   it("bundles the theme system with no external assets", () => {

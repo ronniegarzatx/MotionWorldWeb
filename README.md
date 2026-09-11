@@ -194,8 +194,9 @@ never touches HID. See the plan for the full module map.
 Lab · Speed Lab · Sequence Lab (Bounce + Pendulum).
 
 **Plus one special mode:** Art Party (`#/art`) — a non-educational, sensor-driven
-generative visuals instrument. No graphs, equations, or numbers; six Canvas 2D
-effect families respond live to the same sensor stream, through the same
+generative visuals instrument. No graphs, equations, or numbers; seven Canvas 2D
+effect families (including a Kusama Dots polka-dot field) respond live to the
+same sensor stream, through the same
 `AcquisitionController`. Silent, no persistence beyond the ordinary Runs
 autosave, respects `prefers-reduced-motion`.
 

@@ -143,10 +143,10 @@ describe.each(EFFECT_FACTORIES.map((factory, i) => ({ factory, i })))(
 );
 
 describe("art effect roster", () => {
-  it("has six distinctly named effects", () => {
+  it("has seven distinctly named effects", () => {
     const names = EFFECT_FACTORIES.map((f) => f().name);
-    expect(names).toHaveLength(6);
-    expect(new Set(names).size).toBe(6);
+    expect(names).toHaveLength(7);
+    expect(new Set(names).size).toBe(7);
   });
 });
 
