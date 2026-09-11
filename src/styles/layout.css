@@ -219,11 +219,21 @@
 /* Art Party — immersive canvas special mode (#/art). Not a classroom lab:
    the canvas fills the whole route; the overlay floats above it in its own
    opaque panels so status/controls stay readable over whatever is animating
-   underneath, in every theme. */
+   underneath, in every theme.
+
+   `height: 100vh` (not `flex: 1`) is deliberate: this element's only children
+   (the canvas and the overlay) are both `position: absolute`, so it has zero
+   normal-flow content to measure. In a flex/grid ancestor chain whose own
+   height only comes from `min-height` (never an explicit `height`), that
+   left `flex: 1` nothing definite to grow against, and the whole route
+   collapsed to a real, measured `height: 0` in production browsers —
+   invisible even though the DOM (canvas, overlay, buttons) was all there.
+   Every other route avoided this because their content is normal-flow
+   (charts, tiles, text) and always had *some* intrinsic height. An explicit
+   viewport-relative height sidesteps the ambiguity entirely. */
 .art-party {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  height: 100vh;
   background: #000;
   overflow: hidden;
 }
