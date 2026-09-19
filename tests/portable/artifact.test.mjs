@@ -84,6 +84,11 @@ describe("portable artifact (real build)", () => {
     expect(html).not.toMatch(/mathjax|katex|scipy|pyodide/i);
   });
 
+  it("bundles Sequence Lab's scatter/linear-fit bridge (Pearson r is all local TS)", () => {
+    expect(html).toContain("LINE OF BEST FIT");
+    expect(html).toContain("Best model:");
+  });
+
   it("bundles Art Party (sensor-driven Canvas 2D visuals, no remote runtime dependency)", () => {
     expect(html).toContain("Art Party");
     expect(html).toContain("Sensor-powered visuals");

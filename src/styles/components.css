@@ -960,6 +960,34 @@
   }
 }
 
+.sequence-fit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.sequence-fit:empty {
+  display: none;
+}
+.sequence-fit__title {
+  font-size: var(--type-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.sequence-fit__r {
+  font-size: var(--type-body);
+  font-variant-numeric: tabular-nums;
+}
+.sequence-fit__eq {
+  font-size: var(--type-label);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.sequence-fit__model {
+  font-size: var(--type-label);
+  color: var(--ink-dim);
+}
+
 /* Target picker */
 .target-picker {
   position: fixed;

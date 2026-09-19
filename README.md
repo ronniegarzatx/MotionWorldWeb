@@ -133,6 +133,11 @@ built and hardware-verified in M0. Protocol diagnostics live behind
     muted, never deleted.
   - All cycle detection and sequence maths are bundled TypeScript — no SciPy, no
     Pyodide, no remote DSP.
+  - **Scatter/linear-fit bridge.** The same `n` vs value terms are read as a
+    scatter plot: Pearson `r`, direction, strength, and a **LINE OF BEST FIT**
+    drawn on the terms graph, plus a best-model call (`linear` / `exponential` /
+    `neither`) that never forces a line through a curved (e.g. bounce-decay)
+    sequence. Pure TS, `src/model/scatter-fit.ts`.
 
 - Design spec: [`docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md`](docs/superpowers/specs/2026-09-06-motion-world-web-v1-design.md)
 - Implementation plan: [`docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md`](docs/superpowers/plans/2026-09-07-webhid-sensor-spike.md)

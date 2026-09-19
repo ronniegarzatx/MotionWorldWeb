@@ -118,6 +118,14 @@ describe("sequence-lab-view — bounce (default)", () => {
     expect(host.querySelector(".sequence-result__label")!.textContent).toBe("COMMON RATIO");
     expect(host.querySelector(".sequence-result__value")!.textContent).toMatch(/r ≈ 0\.\d\d/);
     expect(host.querySelector(".sequence-result__status")!.textContent).toMatch(/RATIO/);
+
+    // the scatter/linear-fit bridge: bounce decay reads as exponential, with a
+    // best-fit line still drawn on the terms graph as the "linear function" anchor
+    expect(host.querySelector(".sequence-fit__title")!.textContent).toBe("LINE OF BEST FIT");
+    expect(host.querySelector(".sequence-fit__r")!.textContent).toMatch(/r ≈ -?0\.\d\d/);
+    expect(host.querySelector(".sequence-fit__eq")!.textContent).toMatch(/^y ≈ /);
+    expect(host.querySelector(".sequence-fit__model")!.textContent).toMatch(/^Best model: exponential/);
+    expect(terms.querySelector(".model-curve")).not.toBeNull();
   });
 
   it("SENSITIVITY reruns detection on the same run without recollecting", async () => {
@@ -178,6 +186,7 @@ describe("sequence-lab-view — pendulum", () => {
     seg(host, "Pendulum mode").click();
     expect(host.querySelector(".sequence-result__reason")!.textContent).toMatch(/swings/i);
     expect(host.querySelector(".sequence-graphs--single")).not.toBeNull();
+    expect(host.querySelector(".sequence-fit__title")).toBeNull();
     // controls still respond
     seg(host, "High sensitivity").click();
     expect(seg(host, "High sensitivity").getAttribute("aria-pressed")).toBe("true");

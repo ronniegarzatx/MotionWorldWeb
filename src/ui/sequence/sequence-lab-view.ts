@@ -18,6 +18,7 @@ import {
 import { mountChart, type ChartHandle, type ChartInput } from "../chart/time-series-chart.js";
 import { createFrameScheduler } from "../raf.js";
 import { button, el } from "../components/dom.js";
+import type { ScatterFit } from "../../model/scatter-fit.js";
 
 export interface SequenceLabDeps {
   readonly controller: AcquisitionController;
@@ -27,6 +28,18 @@ export interface SequenceLabDeps {
 }
 
 const SENS_LABEL: Record<Sensitivity, string> = { low: "Low", standard: "Standard", high: "High" };
+
+const BEST_MODEL_COPY: Record<ScatterFit["bestModel"], string> = {
+  linear: "Best model: linear — a straight line fits this well.",
+  exponential: "Best model: exponential — a curve fits noticeably better than a line.",
+  neither: "Best model: neither — too weak to call linear or exponential.",
+};
+
+function fitEquation(fit: ScatterFit): string {
+  const { slope, intercept } = fit.linear;
+  const sign = intercept < 0 ? "−" : "+";
+  return `y ≈ ${slope.toFixed(2)}n ${sign} ${Math.abs(intercept).toFixed(2)}`;
+}
 
 export function mountSequenceLabView(host: HTMLElement, deps: SequenceLabDeps): () => void {
   let disposed = false;
@@ -141,6 +154,7 @@ export function mountSequenceLabView(host: HTMLElement, deps: SequenceLabDeps): 
     const resultSlot = el("div", { className: "sequence-result speed-result" });
     const rawHost = el("div", { className: "chart-host" });
     const termsHost = el("div", { className: "chart-host sequence-terms-chart" });
+    const fitSlot = el("div", { className: "sequence-fit" });
     const graphs = el(
       "div",
       { className: "sequence-graphs" },
@@ -155,6 +169,7 @@ export function mountSequenceLabView(host: HTMLElement, deps: SequenceLabDeps): 
         { className: "sequence-graph sequence-graph--terms" },
         el("span", { className: "sequence-graph__title sequence-graph__title--terms" }),
         termsHost,
+        fitSlot,
       ),
     );
 
@@ -394,6 +409,7 @@ export function mountSequenceLabView(host: HTMLElement, deps: SequenceLabDeps): 
     function drawTerms(): void {
       const a = ws.analysis;
       const included = a.terms.filter((tm) => tm.included);
+      const fit = a.fit;
       termsChart.update({
         series: { t: included.map((tm) => tm.n), x: included.map((tm) => tm.value) },
         xLabel: "n",
@@ -402,7 +418,26 @@ export function mountSequenceLabView(host: HTMLElement, deps: SequenceLabDeps): 
         yDomain: "auto",
         markerRadius: 7,
         markers: a.terms.map((tm) => ({ t: tm.n, x: tm.value, muted: !tm.included })),
+        ...(fit ? { functionOverlay: (n: number) => fit.linear.slope * n + fit.linear.intercept } : {}),
       });
+    }
+
+    function renderFit(): void {
+      const fit = ws.analysis.fit;
+      if (!fit) {
+        fitSlot.replaceChildren();
+        return;
+      }
+      const rLine =
+        fit.strength === "none"
+          ? "r ≈ 0.00 — no linear relationship"
+          : `r ≈ ${fit.r.toFixed(2)} · ${fit.direction} · ${fit.strength}`;
+      fitSlot.replaceChildren(
+        el("span", { className: "sequence-fit__title", textContent: "LINE OF BEST FIT" }),
+        el("p", { className: "sequence-fit__r", textContent: rLine }),
+        el("p", { className: "sequence-fit__eq", textContent: fitEquation(fit) }),
+        el("p", { className: "sequence-fit__model", textContent: BEST_MODEL_COPY[fit.bestModel] }),
+      );
     }
 
     function render(): void {
@@ -417,7 +452,12 @@ export function mountSequenceLabView(host: HTMLElement, deps: SequenceLabDeps): 
             ? "PERIOD SEQUENCE"
             : "TURNING-POINT AMPLITUDE";
       drawRaw();
-      if (!single) drawTerms();
+      if (!single) {
+        drawTerms();
+        renderFit();
+      } else {
+        fitSlot.replaceChildren();
+      }
     }
 
     render();

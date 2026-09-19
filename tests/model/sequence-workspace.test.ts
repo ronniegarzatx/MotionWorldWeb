@@ -66,6 +66,10 @@ describe("sequence-workspace", () => {
     expect(ws.analysis.headline.value).toMatch(/r ≈ 0\.\d\d/);
     expect(rangeIsFull(ws)).toBe(true);
     expect(ws.analysis.terms.length).toBe(ws.analysis.fullTermCount);
+    // bounce height decay is close to geometric — the scatter bridge should
+    // read it as exponential, not force a line through it
+    expect(ws.analysis.fit).not.toBeNull();
+    expect(ws.analysis.fit!.bestModel).toBe("exponential");
   });
 
   it("setMode bounce↔pendulum recomputes and resets the range", () => {
@@ -78,6 +82,16 @@ describe("sequence-workspace", () => {
     expect(ws1.analysis.yLabel).toBe("Amplitude (m)");
     expect(rangeIsFull(ws1)).toBe(true);
     expect(setMode(ws1, "bounce").mode).toBe("bounce");
+  });
+
+  it("an undamped pendulum (constant amplitude) reads the scatter fit as linear, not exponential", () => {
+    // decay: 0 — the exact shape the fake sensor adapter produces for manual
+    // testing. Regression test: parabolic vertex-refinement noise around a
+    // ~constant amplitude must not tip classifyBestModel toward "exponential".
+    const ws = setMode(startSequenceWorkspace(pendulumRun("undamped", { decay: 0, n: 1100 })), "pendulum");
+    expect(ws.analysis.ok).toBe(true);
+    expect(ws.analysis.fit).not.toBeNull();
+    expect(ws.analysis.fit!.bestModel).toBe("linear");
   });
 
   it("pendulum period mode yields AVERAGE PERIOD", () => {

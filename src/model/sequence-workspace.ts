@@ -8,6 +8,7 @@ import {
   pendulumPeriodSeries,
 } from "./pendulum-analysis.js";
 import { sequenceRatio } from "./sequence-ratio.js";
+import { fitScatter, type ScatterFit } from "./scatter-fit.js";
 import {
   applyRange,
   clampRange,
@@ -54,6 +55,9 @@ export interface SequenceAnalysis {
   readonly headline: { readonly label: string; readonly value: string };
   readonly status: string | null;
   readonly formula: string | null;
+  /** The n-vs-value scatter read as a linear/exponential/neither judgment call.
+   *  null when there are too few included terms (< MIN_SCATTER_POINTS). */
+  readonly fit: ScatterFit | null;
 }
 
 export interface SequenceWorkspace {
@@ -83,6 +87,7 @@ function failedAnalysis(reason: string, yLabel: string, headlineLabel: string): 
     headline: { label: headlineLabel, value: "—" },
     status: null,
     formula: null,
+    fit: null,
   };
 }
 
@@ -120,7 +125,8 @@ function buildBounce(run: MotionRun, sensitivity: Sensitivity, range: SequenceRa
     included: i + 1 >= r.start && i + 1 <= r.end,
   }));
 
-  const heights = terms.filter((t) => t.included).map((t) => t.value);
+  const includedTerms = terms.filter((t) => t.included);
+  const heights = includedTerms.map((t) => t.value);
   const ratio = sequenceRatio(heights);
   const hasRatio = ratio.ratio !== null && Number.isFinite(ratio.ratio);
 
@@ -138,6 +144,7 @@ function buildBounce(run: MotionRun, sensitivity: Sensitivity, range: SequenceRa
         hasRatio && ratio.usableTermCount >= 3 && heights.length > 0
           ? `aₙ ≈ ${heights[0]!.toFixed(2)} · ${ratio.ratio!.toFixed(2)}${sup("n-1")}`
           : null,
+      fit: fitScatter(includedTerms.map((t) => ({ x: t.n, y: t.value }))),
     },
     range: r,
   };
@@ -187,7 +194,8 @@ function buildPendulum(
 
     const startT = seq.terms[r.start - 1]?.timeSeconds ?? -Infinity;
     const endT = seq.terms[r.end - 1]?.timeSeconds ?? Infinity;
-    const amps = terms.filter((t) => t.included).map((t) => t.value);
+    const includedTerms = terms.filter((t) => t.included);
+    const amps = includedTerms.map((t) => t.value);
     const ratio = sequenceRatio(amps);
     const hasRatio = ratio.ratio !== null && Number.isFinite(ratio.ratio);
 
@@ -208,6 +216,7 @@ function buildPendulum(
           hasRatio && ratio.usableTermCount >= 3 && amps.length > 0
             ? `aₙ ≈ ${amps[0]!.toFixed(2)} · ${ratio.ratio!.toFixed(2)}${sup("n-1")}`
             : null,
+        fit: fitScatter(includedTerms.map((t) => ({ x: t.n, y: t.value }))),
       },
       range: r,
     };
@@ -240,7 +249,8 @@ function buildPendulum(
 
   const startT = likeTimes[r.start - 1] ?? -Infinity;
   const endT = likeTimes[r.end] ?? Infinity;
-  const kept = terms.filter((t) => t.included).map((t) => t.value);
+  const includedPeriods = terms.filter((t) => t.included);
+  const kept = includedPeriods.map((t) => t.value);
   const avg = mean(kept);
   const cv = coefficientOfVariation(kept);
   const hasAvg = Number.isFinite(avg);
@@ -256,6 +266,7 @@ function buildPendulum(
       headline: { label: headlineLabel, value: hasAvg ? `T ≈ ${avg.toFixed(2)} s` : "—" },
       status: hasAvg ? (cv <= 0.18 ? "PERIOD LOOKS CONSISTENT" : "PERIOD VARIES") : null,
       formula: null,
+      fit: fitScatter(includedPeriods.map((t) => ({ x: t.n, y: t.value }))),
     },
     range: r,
   };
